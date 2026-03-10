@@ -1,0 +1,55 @@
+Project Name: Coinaty — The Premier Social Network for Coin Collectors
+
+Tech Stack Request: > Build a high-performance Full-Stack Web Application using React, Tailwind CSS, and Supabase (for Database, Authentication, and Realtime Chat).
+
+1. User Identity & Social Profiles:
+
+Onboarding: Create a secure Sign-up/Login system using Supabase Auth.
+
+Customizable Profiles: Users must be able to upload/change a Profile Picture and edit their Display Name.
+
+The Coin Vault: A section on the profile where users add coins. Each entry needs: Photo, Title, Description, and a Category (e.g., Ottoman, Kingdom of Egypt, Modern).
+
+2. Interactive Social Core:
+
+The Feed: A Facebook-style scrolling feed of all public coin posts.
+
+Advanced Likes: >    * Every post shows a total Like count.
+
+Clickable Likes: When the count is clicked, open a modal showing the list of users (Names + Avatars) who liked that post.
+
+Real-Time Chat System:
+
+Public Global Chat: A sitewide chat room for all members to discuss numismatics.
+
+Private Direct Messages: A "Message" button on every user profile to start a private 1-on-1 conversation.
+
+Use Supabase Realtime to ensure messages and likes update instantly without refreshing.
+
+3. Professional Value Tracker:
+
+Bullion Integration: Create a "Real Value" tracker. For coins made of precious metals, the app should fetch live Gold/Silver prices (use a mock service or a free API like GoldAPI.io).
+
+Numista Link: Include a "Check Market Value" button on each coin post that generates a search link to the Numista database for that specific coin.
+
+Portfolio Dashboard: On the private user profile, show the "Total Estimated Value" of their entire collection.
+
+4. Gamification (The Progression System):
+
+Points: 10pts per coin uploaded, 5pts per comment, 2pts per like received.
+
+Ranks: Display a badge on the profile:
+
+Level 1-100 pts: Novice Collector
+
+101-500 pts: Numismatist
+
+500+ pts: Master of Coinaty
+
+Wishlist: A dedicated tab on the profile for "Coins I am Hunting" so other users can offer trades.
+
+5. Visual Design:
+
+Theme: "The Royal Museum" — Deep Charcoal (#121212) background with Brushed Gold (#D4AF37) borders and buttons.
+
+Layout: Side navigation for Desktop, Bottom navigation for Mobile.
