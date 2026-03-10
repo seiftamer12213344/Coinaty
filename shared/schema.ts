@@ -1,18 +1,86 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { users } from "./models/auth";
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+export { users };
+
+export const coins = pgTable("coins", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  category: text("category").notNull(), // e.g., Ottoman, Kingdom of Egypt, Modern
+  photoUrl: text("photo_url").notNull(),
+  metalType: text("metal_type"), // Optional, e.g., Gold, Silver
+  estimatedValue: integer("estimated_value").default(0), 
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const coinLikes = pgTable("coin_likes", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  coinId: integer("coin_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export const comments = pgTable("comments", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  coinId: integer("coin_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const messages = pgTable("messages", {
+  id: serial("id").primaryKey(),
+  senderId: varchar("sender_id").notNull(),
+  receiverId: varchar("receiver_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  coins: many(coins),
+  likes: many(coinLikes),
+  comments: many(comments),
+}));
+
+export const coinsRelations = relations(coins, ({ one, many }) => ({
+  user: one(users, { fields: [coins.userId], references: [users.id] }),
+  likes: many(coinLikes),
+  comments: many(comments),
+}));
+
+export const coinLikesRelations = relations(coinLikes, ({ one }) => ({
+  user: one(users, { fields: [coinLikes.userId], references: [users.id] }),
+  coin: one(coins, { fields: [coinLikes.coinId], references: [coins.id] }),
+}));
+
+export const commentsRelations = relations(comments, ({ one }) => ({
+  user: one(users, { fields: [comments.userId], references: [users.id] }),
+  coin: one(coins, { fields: [comments.coinId], references: [coins.id] }),
+}));
+
+
+// Zod Schemas
+export const insertCoinSchema = createInsertSchema(coins).omit({ 
+  id: true, createdAt: true, userId: true, estimatedValue: true 
+});
+export const insertCommentSchema = createInsertSchema(comments).omit({ 
+  id: true, createdAt: true, userId: true, coinId: true 
+});
+export const insertMessageSchema = createInsertSchema(messages).omit({ 
+  id: true, createdAt: true, senderId: true 
+});
+
+// Exports
 export type User = typeof users.$inferSelect;
+export type Coin = typeof coins.$inferSelect;
+export type CoinLike = typeof coinLikes.$inferSelect;
+export type Comment = typeof comments.$inferSelect;
+export type Message = typeof messages.$inferSelect;
+
+export type InsertCoin = z.infer<typeof insertCoinSchema>;

@@ -1,0 +1,52 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, buildUrl } from "@shared/routes";
+
+export function useConversations() {
+  return useQuery({
+    queryKey: [api.messages.getConversations.path],
+    queryFn: async () => {
+      const res = await fetch(api.messages.getConversations.path, { credentials: "include" });
+      if (res.status === 401) return []; // Handle unauthorized gracefully
+      if (!res.ok) throw new Error("Failed to fetch conversations");
+      return api.messages.getConversations.responses[200].parse(await res.json());
+    },
+  });
+}
+
+export function useMessages(userId?: string) {
+  return useQuery({
+    queryKey: [api.messages.list.path, userId],
+    queryFn: async () => {
+      if (!userId) return [];
+      const url = buildUrl(api.messages.list.path, { userId });
+      const res = await fetch(url, { credentials: "include" });
+      if (res.status === 401) return [];
+      if (!res.ok) throw new Error("Failed to fetch messages");
+      return api.messages.list.responses[200].parse(await res.json());
+    },
+    enabled: !!userId,
+    refetchInterval: 5000, // Poll every 5s for new messages (simple real-time for MVP)
+  });
+}
+
+export function useSendMessage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, content }: { userId: string; content: string }) => {
+      const validated = api.messages.send.input.parse({ content });
+      const url = buildUrl(api.messages.send.path, { userId });
+      const res = await fetch(url, {
+        method: api.messages.send.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(validated),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to send message");
+      return api.messages.send.responses[201].parse(await res.json());
+    },
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: [api.messages.list.path, userId] });
+      queryClient.invalidateQueries({ queryKey: [api.messages.getConversations.path] });
+    },
+  });
+}
