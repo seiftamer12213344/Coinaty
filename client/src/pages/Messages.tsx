@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useConversations, useMessages, useSendMessage } from "@/hooks/use-messages";
 import { Shell } from "@/components/layout/Shell";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { Send, Search } from "lucide-react";
+import { Send, Search, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 
 export default function Messages() {
