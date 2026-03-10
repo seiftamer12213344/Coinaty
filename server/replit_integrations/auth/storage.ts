@@ -1,6 +1,9 @@
-import { users, type User, type UpsertUser } from "@shared/models/auth";
+import { users } from "@shared/schema";
 import { db } from "../../db";
 import { eq } from "drizzle-orm";
+import type { User } from "@shared/schema";
+
+export type UpsertUser = typeof users.$inferInsert;
 
 // Interface for auth storage operations
 // (IMPORTANT) These user operations are mandatory for Replit Auth.
