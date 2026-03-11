@@ -15,6 +15,7 @@ import {
 const NAV_ITEMS = [
   { href: "/", label: "The Gallery", icon: Compass },
   { href: "/leaderboard", label: "Top Collectors", icon: Trophy },
+  { href: "/search", label: "Find Collectors", icon: Search },
   { href: "/messages", label: "Discussions", icon: MessageSquare },
   { href: "/profile", label: "My Vault", icon: User },
 ];
@@ -125,9 +126,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
             COINATY
           </Link>
           <div className="flex items-center gap-3">
-            <button className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-primary">
+            <Link href="/search" className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-primary">
               <Search className="w-4 h-4" />
-            </button>
+            </Link>
             {!isAuthenticated && (
                <button 
                 onClick={() => window.location.href = "/api/login"}

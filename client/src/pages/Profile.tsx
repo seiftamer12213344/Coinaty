@@ -1,26 +1,64 @@
 import { useState } from "react";
-import { useParams } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { useUserProfile } from "@/hooks/use-users";
+import { useUserProfile, useUpdateProfile } from "@/hooks/use-users";
 import { useCoins } from "@/hooks/use-coins";
 import { Shell } from "@/components/layout/Shell";
 import { CoinCard } from "@/components/CoinCard";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { Settings, Shield, MapPin, CalendarDays, Edit3 } from "lucide-react";
-import { format } from "date-fns";
+import { Settings, Shield, MapPin, CalendarDays, Edit3, MessageSquare, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Profile() {
   const { id } = useParams<{ id?: string }>();
+  const [, setLocation] = useLocation();
   const { user: authUser } = useAuth();
+  const { toast } = useToast();
   
-  // If no ID provided, view own profile. If ID provided, view that user's profile.
   const targetId = id || authUser?.id;
   const isOwnProfile = targetId === authUser?.id;
 
   const { data: profile, isLoading: profileLoading } = useUserProfile(targetId);
   const { data: userCoins, isLoading: coinsLoading } = useCoins({ userId: targetId });
+  const updateProfile = useUpdateProfile();
 
   const [activeTab, setActiveTab] = useState<"vault" | "wishlist">("vault");
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState("");
+  const [editPhotoUrl, setEditPhotoUrl] = useState("");
+
+  const openEditModal = () => {
+    setEditDisplayName(profile?.displayName || "");
+    setEditPhotoUrl(profile?.profileImageUrl || "");
+    setShowEditModal(true);
+  };
+
+  const handleSaveProfile = () => {
+    updateProfile.mutate(
+      { displayName: editDisplayName, profileImageUrl: editPhotoUrl },
+      {
+        onSuccess: () => {
+          setShowEditModal(false);
+          toast({ title: "Profile updated", description: "Your profile has been updated." });
+        },
+        onError: () => {
+          toast({ title: "Error", description: "Failed to update profile.", variant: "destructive" });
+        },
+      }
+    );
+  };
+
+  const handleStartDiscussion = () => {
+    if (!authUser) {
+      window.location.href = "/api/login";
+      return;
+    }
+    setLocation(`/messages?user=${targetId}`);
+  };
 
   if (profileLoading) return <Shell><div className="pt-32"><LoadingSpinner /></div></Shell>;
   
@@ -41,7 +79,6 @@ export default function Profile() {
         {/* Profile Header Card */}
         <div className="bg-card md:rounded-3xl border-b md:border border-border/50 overflow-hidden">
           <div className="h-32 md:h-48 bg-gradient-to-r from-black via-[#2a220e] to-black relative border-b border-primary/20">
-            {/* Banner pattern */}
             <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary via-transparent to-transparent" />
           </div>
           
@@ -70,11 +107,25 @@ export default function Profile() {
                 </p>
               </div>
 
-              {isOwnProfile && (
-                <button className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 hover:border-primary/50 hover:bg-primary/10 rounded-lg text-sm font-medium transition-all w-fit">
-                  <Edit3 className="w-4 h-4" /> Edit Profile
-                </button>
-              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                {isOwnProfile ? (
+                  <button
+                    data-testid="button-edit-profile"
+                    onClick={openEditModal}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 hover:border-primary/50 hover:bg-primary/10 rounded-lg text-sm font-medium transition-all"
+                  >
+                    <Edit3 className="w-4 h-4" /> Edit Profile
+                  </button>
+                ) : (
+                  <button
+                    data-testid="button-start-discussion"
+                    onClick={handleStartDiscussion}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary rounded-lg text-sm font-medium transition-all"
+                  >
+                    <MessageSquare className="w-4 h-4" /> Start Discussion
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Stats Row */}
@@ -114,7 +165,6 @@ export default function Profile() {
             </button>
           </div>
 
-          {/* Content */}
           <div className="pb-10">
             {activeTab === 'vault' && (
               coinsLoading ? (
@@ -142,6 +192,68 @@ export default function Profile() {
         </div>
 
       </div>
+
+      {/* Edit Profile Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="bg-card border-border sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl">Edit Profile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="displayName" className="text-sm text-muted-foreground uppercase tracking-wider">Display Name</Label>
+              <Input
+                id="displayName"
+                data-testid="input-display-name"
+                value={editDisplayName}
+                onChange={e => setEditDisplayName(e.target.value)}
+                placeholder="Your collector name"
+                className="bg-black/30 border-border focus:border-primary"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="photoUrl" className="text-sm text-muted-foreground uppercase tracking-wider">Profile Photo URL</Label>
+              <Input
+                id="photoUrl"
+                data-testid="input-photo-url"
+                value={editPhotoUrl}
+                onChange={e => setEditPhotoUrl(e.target.value)}
+                placeholder="https://example.com/photo.jpg"
+                className="bg-black/30 border-border focus:border-primary"
+              />
+              {editPhotoUrl && (
+                <div className="mt-2 flex items-center gap-3">
+                  <img
+                    src={editPhotoUrl}
+                    alt="Preview"
+                    className="w-12 h-12 rounded-full object-cover border border-primary/30"
+                    onError={e => (e.currentTarget.style.display = "none")}
+                  />
+                  <span className="text-xs text-muted-foreground">Preview</span>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                data-testid="button-cancel-edit"
+                variant="outline"
+                className="flex-1 border-border"
+                onClick={() => setShowEditModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                data-testid="button-save-profile"
+                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={handleSaveProfile}
+                disabled={updateProfile.isPending}
+              >
+                {updateProfile.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Shell>
   );
 }

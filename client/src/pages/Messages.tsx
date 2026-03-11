@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useConversations, useMessages, useSendMessage } from "@/hooks/use-messages";
+import { useUserProfile } from "@/hooks/use-users";
 import { Shell } from "@/components/layout/Shell";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Send, Search, MessageSquare } from "lucide-react";
@@ -9,8 +10,14 @@ import { format } from "date-fns";
 export default function Messages() {
   const { user, isLoading: authLoading } = useAuth();
   const { data: conversations, isLoading: convsLoading } = useConversations();
-  
-  const [activeUserId, setActiveUserId] = useState<string | null>(null);
+
+  const preselectedUserId = new URLSearchParams(window.location.search).get("user");
+  const [activeUserId, setActiveUserId] = useState<string | null>(preselectedUserId);
+
+  useEffect(() => {
+    if (preselectedUserId) setActiveUserId(preselectedUserId);
+  }, [preselectedUserId]);
+
   const [msgInput, setMsgInput] = useState("");
   
   const { data: messages, isLoading: msgsLoading } = useMessages(activeUserId || undefined);
@@ -22,7 +29,9 @@ export default function Messages() {
     return null;
   }
 
-  const activeUser = conversations?.find(c => c.id === activeUserId);
+  const activeUserFromConvs = conversations?.find(c => c.id === activeUserId);
+  const { data: fetchedActiveUser } = useUserProfile(activeUserId && !activeUserFromConvs ? activeUserId : undefined);
+  const activeUser = activeUserFromConvs || fetchedActiveUser;
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();

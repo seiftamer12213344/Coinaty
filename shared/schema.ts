@@ -87,7 +87,7 @@ export const commentsRelations = relations(comments, ({ one }) => ({
 
 // Zod Schemas
 export const insertCoinSchema = createInsertSchema(coins).omit({ 
-  id: true, createdAt: true, userId: true, estimatedValue: true 
+  id: true, createdAt: true, userId: true 
 });
 export const insertCommentSchema = createInsertSchema(comments).omit({ 
   id: true, createdAt: true, userId: true, coinId: true 

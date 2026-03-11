@@ -1,7 +1,6 @@
-import { coins, coinLikes, comments, messages, type User, type Coin, type CoinLike, type Comment, type Message, type InsertCoin } from "@shared/schema";
-import { users as usersTable } from "@shared/models/auth";
+import { coins, coinLikes, comments, messages, users as usersTable, type User, type Coin, type CoinLike, type Comment, type Message, type InsertCoin } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, desc, inArray, sql } from "drizzle-orm";
+import { eq, and, or, desc, inArray, sql, ilike } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth";
 
 export interface IStorage extends IAuthStorage {
@@ -9,6 +8,7 @@ export interface IStorage extends IAuthStorage {
   getCoins(category?: string, userId?: string): Promise<Coin[]>;
   getCoin(id: number): Promise<Coin | undefined>;
   createCoin(coin: InsertCoin, userId: string): Promise<Coin>;
+  deleteCoin(id: number, userId: string): Promise<boolean>;
   
   // Likes
   getLikesCount(coinId: number): Promise<number>;
@@ -23,6 +23,7 @@ export interface IStorage extends IAuthStorage {
   // Users
   updateUserProfile(userId: string, updates: { displayName?: string, profileImageUrl?: string }): Promise<User | undefined>;
   getLeaderboard(): Promise<User[]>;
+  searchUsers(query: string): Promise<User[]>;
 
   // Messages
   getConversations(userId: string): Promise<User[]>;
@@ -66,6 +67,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(usersTable.id, userId));
 
     return coin;
+  }
+
+  async deleteCoin(id: number, userId: string): Promise<boolean> {
+    const coin = await this.getCoin(id);
+    if (!coin || coin.userId !== userId) return false;
+    await db.delete(coins).where(eq(coins.id, id));
+    return true;
   }
 
   async getLikesCount(coinId: number): Promise<number> {
@@ -136,6 +144,13 @@ export class DatabaseStorage implements IStorage {
 
   async getLeaderboard(): Promise<User[]> {
     return await db.select().from(usersTable).orderBy(desc(usersTable.points)).limit(50);
+  }
+
+  async searchUsers(query: string): Promise<User[]> {
+    if (!query.trim()) return [];
+    return await db.select().from(usersTable)
+      .where(ilike(usersTable.displayName, `%${query}%`))
+      .limit(20);
   }
 
   async getConversations(userId: string): Promise<User[]> {

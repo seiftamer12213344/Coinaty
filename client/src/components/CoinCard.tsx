@@ -1,26 +1,29 @@
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Heart, MessageSquare, ExternalLink, BadgeCheck } from "lucide-react";
+import { Heart, MessageSquare, ExternalLink, BadgeCheck, Trash2 } from "lucide-react";
 import type { Coin } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
-import { useToggleLike, useCoinLikes, useComments } from "@/hooks/use-coins";
+import { useToggleLike, useCoinLikes, useComments, useDeleteCoin } from "@/hooks/use-coins";
 import { useUserProfile } from "@/hooks/use-users";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export function CoinCard({ coin }: { coin: Coin }) {
   const { user } = useAuth();
   const toggleLike = useToggleLike();
+  const deleteCoin = useDeleteCoin();
   const { data: likes } = useCoinLikes(coin.id);
   const { data: comments } = useComments(coin.id);
   const { data: owner } = useUserProfile(coin.userId);
   
   const [showLikes, setShowLikes] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const hasLiked = likes?.some(u => u.id === user?.id) || false;
+  const isOwner = user?.id === coin.userId;
   const numistaLink = `https://en.numista.com/catalogue/index.php?e=&r=${encodeURIComponent(coin.title)}`;
 
-  // Determine border color based on metal type for that premium feel
   const getMetalGlow = (metal: string | null) => {
     if (!metal) return "border-border/30";
     const m = metal.toLowerCase();
@@ -28,6 +31,12 @@ export function CoinCard({ coin }: { coin: Coin }) {
     if (m.includes("silver")) return "border-[#C0C0C0]/50 shadow-[0_0_15px_rgba(192,192,192,0.1)]";
     if (m.includes("bronze") || m.includes("copper")) return "border-[#CD7F32]/50";
     return "border-border/30";
+  };
+
+  const handleDelete = () => {
+    deleteCoin.mutate(coin.id, {
+      onSuccess: () => setShowDeleteConfirm(false),
+    });
   };
 
   return (
@@ -59,17 +68,27 @@ export function CoinCard({ coin }: { coin: Coin }) {
           </div>
         </div>
         
-        <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
-          {coin.category}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20">
+            {coin.category}
+          </span>
+          {isOwner && (
+            <button
+              data-testid={`button-delete-coin-${coin.id}`}
+              onClick={() => setShowDeleteConfirm(true)}
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+              title="Delete coin"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Image */}
       <Link href={`/coin/${coin.id}`}>
         <div className="relative aspect-square w-full bg-black/50 overflow-hidden cursor-pointer">
-          {/* Subtle vignette for museum lighting effect */}
           <div className="absolute inset-0 bg-radial-gradient from-transparent to-black/60 z-10 pointer-events-none" />
-          
           <img 
             src={coin.photoUrl || "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80"} 
             alt={coin.title}
@@ -94,9 +113,9 @@ export function CoinCard({ coin }: { coin: Coin }) {
 
         <div className="flex items-center justify-between pt-4 border-t border-border/50">
           <div className="flex items-center gap-4">
-            {/* Like Button */}
             <div className="flex items-center gap-1.5">
               <button 
+                data-testid={`button-like-${coin.id}`}
                 onClick={() => {
                   if (!user) window.location.href = "/api/login";
                   else toggleLike.mutate(coin.id);
@@ -113,6 +132,7 @@ export function CoinCard({ coin }: { coin: Coin }) {
                 />
               </button>
               <button 
+                data-testid={`button-likes-count-${coin.id}`}
                 className="text-sm font-medium hover:text-primary"
                 onClick={() => setShowLikes(true)}
               >
@@ -120,7 +140,6 @@ export function CoinCard({ coin }: { coin: Coin }) {
               </button>
             </div>
 
-            {/* Comment Link */}
             <Link href={`/coin/${coin.id}`} className="flex items-center gap-1.5 group p-1 text-muted-foreground hover:text-foreground">
               <MessageSquare className="w-6 h-6 transition-colors" />
               <span className="text-sm font-medium">{comments?.length || 0}</span>
@@ -131,6 +150,7 @@ export function CoinCard({ coin }: { coin: Coin }) {
             href={numistaLink} 
             target="_blank" 
             rel="noreferrer"
+            data-testid={`link-check-value-${coin.id}`}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-primary/10 border border-white/10 hover:border-primary/50 text-xs font-medium text-foreground transition-all"
           >
             Check Value
@@ -170,6 +190,36 @@ export function CoinCard({ coin }: { coin: Coin }) {
               ))
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent className="bg-card border-border sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-xl">Remove from Vault?</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              This will permanently remove <span className="text-foreground font-medium">"{coin.title}"</span> from your collection. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 gap-2">
+            <Button
+              data-testid="button-cancel-delete"
+              variant="outline"
+              onClick={() => setShowDeleteConfirm(false)}
+              className="border-border"
+            >
+              Cancel
+            </Button>
+            <Button
+              data-testid="button-confirm-delete"
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleteCoin.isPending}
+            >
+              {deleteCoin.isPending ? "Removing..." : "Remove Coin"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

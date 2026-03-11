@@ -1,6 +1,5 @@
 import { z } from "zod";
-import { insertCoinSchema, insertCommentSchema, insertMessageSchema, coins, users, comments } from "./schema";
-import { users as usersSchema } from "./models/auth";
+import { insertCoinSchema, coins, users, comments, messages } from "./schema";
 
 export const errorSchemas = {
   validation: z.object({
@@ -15,7 +14,6 @@ export const errorSchemas = {
   }),
 };
 
-// Common response schemas
 const userResponseSchema = z.object({
   id: z.string(),
   displayName: z.string().nullable(),
@@ -56,6 +54,16 @@ export const api = {
         401: z.object({ message: z.string() })
       },
     },
+    delete: {
+      method: "DELETE" as const,
+      path: "/api/coins/:id" as const,
+      responses: {
+        200: z.object({ message: z.string() }),
+        401: z.object({ message: z.string() }),
+        403: z.object({ message: z.string() }),
+        404: errorSchemas.notFound,
+      },
+    },
     toggleLike: {
       method: "POST" as const,
       path: "/api/coins/:id/like" as const,
@@ -92,6 +100,20 @@ export const api = {
     },
   },
   users: {
+    search: {
+      method: "GET" as const,
+      path: "/api/users/search" as const,
+      responses: {
+        200: z.array(userResponseSchema),
+      }
+    },
+    leaderboard: {
+      method: "GET" as const,
+      path: "/api/users/leaderboard" as const,
+      responses: {
+        200: z.array(userResponseSchema),
+      }
+    },
     getProfile: {
       method: "GET" as const,
       path: "/api/users/:id" as const,
@@ -112,18 +134,11 @@ export const api = {
         401: z.object({ message: z.string() })
       }
     },
-    leaderboard: {
-      method: "GET" as const,
-      path: "/api/users/leaderboard" as const,
-      responses: {
-        200: z.array(userResponseSchema),
-      }
-    }
   },
   messages: {
     list: {
       method: "GET" as const,
-      path: "/api/messages/:userId" as const, // Get conversation with specific user
+      path: "/api/messages/:userId" as const,
       responses: {
         200: z.array(z.custom<typeof messages.$inferSelect>()),
         401: z.object({ message: z.string() })

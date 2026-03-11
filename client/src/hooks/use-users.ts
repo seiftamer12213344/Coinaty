@@ -39,6 +39,19 @@ export function useUpdateProfile() {
   });
 }
 
+export function useSearchUsers(query: string) {
+  return useQuery({
+    queryKey: [api.users.search.path, query],
+    queryFn: async () => {
+      if (!query.trim()) return [];
+      const res = await fetch(`${api.users.search.path}?q=${encodeURIComponent(query)}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to search users");
+      return api.users.search.responses[200].parse(await res.json());
+    },
+    enabled: query.trim().length > 0,
+  });
+}
+
 export function useLeaderboard() {
   return useQuery({
     queryKey: [api.users.leaderboard.path],

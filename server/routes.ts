@@ -105,6 +105,30 @@ export async function registerRoutes(
     }
   });
 
+  // Delete coin
+  app.delete(api.coins.delete.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(404).json({ message: "Invalid ID" });
+      const deleted = await storage.deleteCoin(id, req.user.claims.sub);
+      if (!deleted) return res.status(403).json({ message: "Not authorized or coin not found" });
+      res.status(200).json({ message: "Coin deleted" });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Users - search must be BEFORE :id route
+  app.get(api.users.search.path, async (req, res) => {
+    try {
+      const q = (req.query.q as string) || "";
+      const users = await storage.searchUsers(q);
+      res.status(200).json(users);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Users
   app.get(api.users.getProfile.path, async (req, res) => {
     try {

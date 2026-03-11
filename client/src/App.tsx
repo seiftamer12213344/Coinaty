@@ -12,6 +12,7 @@ import CoinDetails from "./pages/CoinDetails";
 import Profile from "./pages/Profile";
 import Leaderboard from "./pages/Leaderboard";
 import Messages from "./pages/Messages";
+import Search from "./pages/Search";
 
 function Router() {
   return (
@@ -26,6 +27,7 @@ function Router() {
       
       <Route path="/leaderboard" component={Leaderboard} />
       <Route path="/messages" component={Messages} />
+      <Route path="/search" component={Search} />
       
       <Route component={NotFound} />
     </Switch>
