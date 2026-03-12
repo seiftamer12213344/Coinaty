@@ -27,7 +27,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   
   // Mock Market Ticker State
   const [goldPrice, setGoldPrice] = useState(2354.20);
-  const [silverPrice, setSilverPrice] = useState(28.45);
+  const [silverPrice, setSilverPrice] = useState(28.15);
   
   useEffect(() => {
     // Simulate slight price fluctuations
@@ -98,7 +98,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <div className="text-lg text-primary">${goldPrice.toFixed(2)}</div>
             <div className="flex justify-between text-muted-foreground mt-2 mb-1">
               <span>XAG/USD</span>
-              <span className="text-green-400">+{((silverPrice/28 - 1) * 100).toFixed(2)}%</span>
+              <span className="text-[#16978c]">+{((silverPrice/28 - 1) * 100).toFixed(2)}%</span>
             </div>
             <div className="text-primary">${silverPrice.toFixed(2)}</div>
           </div>
@@ -122,7 +122,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
           )}
         </div>
       </aside>
-
       {/* Main Content Area */}
       <main className="flex-1 md:ml-64 pb-20 md:pb-0 min-h-screen">
         {/* Mobile Header */}
@@ -150,7 +149,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
-
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/90 backdrop-blur-xl border-t border-border/50 pb-safe">
         <div className="flex justify-around items-center px-2 py-2">
