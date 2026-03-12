@@ -9,38 +9,38 @@
   --font-sans: 'DM Sans', sans-serif;
   --font-serif: 'Cinzel', serif;
 
-  /* Warm Ivory Antique Paper #F9F7F2 → HSL ~40 43% 96% */
-  --background: 40 43% 96%;
-  /* Charcoal Gray #333333 */
-  --foreground: 0 0% 20%;
+  /* Frozen Mint #F0F4F2 → HSL ~150 15% 95% */
+  --background: 150 15% 95%;
+  /* Slate Blue #1E293B → HSL ~217 33% 17% */
+  --foreground: 217 33% 17%;
 
-  /* Pure White */
+  /* White #FFFFFF with light-blue borders */
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 20%;
+  --card-foreground: 217 33% 17%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 20%;
+  --popover-foreground: 217 33% 17%;
 
-  /* Deep Bronze/Gold #A57D02 → HSL ~46 97% 33% */
-  --primary: 46 97% 33%;
+  /* Electric Teal #0D9488 → HSL ~175 84% 32% */
+  --primary: 175 84% 32%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 40 20% 92%;
-  --secondary-foreground: 0 0% 20%;
+  --secondary: 195 30% 92%;
+  --secondary-foreground: 217 33% 17%;
 
-  --muted: 40 20% 92%;
-  --muted-foreground: 0 0% 45%;
+  --muted: 195 20% 92%;
+  --muted-foreground: 217 20% 45%;
 
-  --accent: 46 97% 33%;
+  --accent: 175 84% 32%;
   --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 55%;
   --destructive-foreground: 0 0% 100%;
 
-  /* Subtle warm gold border */
-  --border: 40 30% 82%;
-  --input: 40 20% 88%;
-  --ring: 46 97% 33%;
+  /* Light blue-teal border */
+  --border: 195 40% 82%;
+  --input: 195 30% 88%;
+  --ring: 175 84% 32%;
 
   --radius: 0.5rem;
 }
