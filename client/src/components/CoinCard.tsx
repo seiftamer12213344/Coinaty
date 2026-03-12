@@ -84,7 +84,6 @@ export function CoinCard({ coin }: { coin: Coin }) {
           )}
         </div>
       </div>
-
       {/* Image */}
       <Link href={`/coin/${coin.id}`}>
         <div className="relative aspect-square w-full bg-black/50 overflow-hidden cursor-pointer">
@@ -92,14 +91,13 @@ export function CoinCard({ coin }: { coin: Coin }) {
           <img 
             src={coin.photoUrl || "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80"} 
             alt={coin.title}
-            className="w-full h-full object-contain p-8 transform group-hover:scale-105 transition-transform duration-700 ease-out"
+            className="w-full h-full object-contain p-8 transform group-hover:scale-105 transition-transform duration-700 ease-out pl-[0px] pr-[0px] pt-[0px] pb-[0px]"
             onError={(e) => {
               (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80";
             }}
           />
         </div>
       </Link>
-
       {/* Content */}
       <div className="p-5">
         <Link href={`/coin/${coin.id}`}>
@@ -158,7 +156,6 @@ export function CoinCard({ coin }: { coin: Coin }) {
           </a>
         </div>
       </div>
-
       {/* Likes Dialog */}
       <Dialog open={showLikes} onOpenChange={setShowLikes}>
         <DialogContent className="bg-card border-border sm:max-w-md">
@@ -192,7 +189,6 @@ export function CoinCard({ coin }: { coin: Coin }) {
           </div>
         </DialogContent>
       </Dialog>
-
       {/* Delete Confirm Dialog */}
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent className="bg-card border-border sm:max-w-sm">
