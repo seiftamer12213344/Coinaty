@@ -26,7 +26,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout } = useAuth();
   
   // Mock Market Ticker State
-  const [goldPrice, setGoldPrice] = useState(2354.20);
+  const [goldPrice, setGoldPrice] = useState(2354.23);
   const [silverPrice, setSilverPrice] = useState(28.15);
   
   useEffect(() => {
@@ -93,7 +93,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <div className="mb-4 px-2 py-3 rounded-lg bg-black/20 dark:bg-black/40 border border-border/30 text-xs font-mono">
             <div className="flex justify-between text-muted-foreground mb-1">
               <span>XAU/USD</span>
-              <span className="text-green-400">+{((goldPrice/2350 - 1) * 100).toFixed(2)}%</span>
+              <span className="text-[#1c9a8f]">+{((goldPrice/2350 - 1) * 100).toFixed(2)}%</span>
             </div>
             <div className="text-lg text-primary">${goldPrice.toFixed(2)}</div>
             <div className="flex justify-between text-muted-foreground mt-2 mb-1">
