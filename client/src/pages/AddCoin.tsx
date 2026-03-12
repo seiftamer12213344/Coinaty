@@ -29,7 +29,8 @@ export default function AddCoin() {
 
     createCoin.mutate({
       ...formData,
-      photoUrl: finalPhotoUrl
+      photoUrl: finalPhotoUrl,
+      estimatedValue: formData.estimatedValue ? Number(formData.estimatedValue) : 0,
     }, {
       onSuccess: () => {
         setLocation("/");

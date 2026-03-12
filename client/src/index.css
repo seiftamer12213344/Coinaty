@@ -4,51 +4,102 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Light Mode (default :root) ─────────────────────────────── */
 :root {
   --font-sans: 'DM Sans', sans-serif;
   --font-serif: 'Cinzel', serif;
 
-  /* The Royal Museum Theme - Deep Charcoal & Brushed Gold */
-  --background: 0 0% 7%; /* #121212 */
-  --foreground: 0 0% 96%; /* #f5f5f5 */
-  
-  --card: 0 0% 10%; /* #1a1a1a */
-  --card-foreground: 0 0% 96%;
-  
-  --popover: 0 0% 10%;
-  --popover-foreground: 0 0% 96%;
-  
-  /* Brushed Gold #D4AF37 -> HSL: 46, 65%, 52% */
-  --primary: 46 65% 52%; 
-  --primary-foreground: 0 0% 7%; /* Dark text on gold */
-  
-  --secondary: 0 0% 15%; /* #262626 */
-  --secondary-foreground: 0 0% 96%;
-  
-  --muted: 0 0% 15%;
-  --muted-foreground: 0 0% 65%; /* #a6a6a6 */
-  
-  --accent: 46 65% 52%;
-  --accent-foreground: 0 0% 7%;
-  
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 96%;
-  
-  --border: 46 40% 30%; /* Darker gold for subtle borders */
-  --input: 0 0% 20%;
-  --ring: 46 65% 52%;
-  
+  /* Warm Ivory Antique Paper #F9F7F2 → HSL ~40 43% 96% */
+  --background: 40 43% 96%;
+  /* Charcoal Gray #333333 */
+  --foreground: 0 0% 20%;
+
+  /* Pure White */
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 20%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 20%;
+
+  /* Deep Bronze/Gold #A57D02 → HSL ~46 97% 33% */
+  --primary: 46 97% 33%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 40 20% 92%;
+  --secondary-foreground: 0 0% 20%;
+
+  --muted: 40 20% 92%;
+  --muted-foreground: 0 0% 45%;
+
+  --accent: 46 97% 33%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 84% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* Subtle warm gold border */
+  --border: 40 30% 82%;
+  --input: 40 20% 88%;
+  --ring: 46 97% 33%;
+
   --radius: 0.5rem;
 }
 
+/* ─── Dark Mode (.dark class on <html>) ──────────────────────── */
+.dark {
+  /* Deep Charcoal #121212 → HSL 0 0% 7% */
+  --background: 0 0% 7%;
+  /* Off-white #E0E0E0 */
+  --foreground: 0 0% 88%;
+
+  /* Soft Slate #1E1E1E → HSL 0 0% 12% */
+  --card: 0 0% 12%;
+  --card-foreground: 0 0% 88%;
+
+  --popover: 0 0% 12%;
+  --popover-foreground: 0 0% 88%;
+
+  /* Metallic Gold #D5B038 → HSL ~46 65% 53% */
+  --primary: 46 65% 53%;
+  --primary-foreground: 0 0% 7%;
+
+  --secondary: 0 0% 15%;
+  --secondary-foreground: 0 0% 88%;
+
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 62%;
+
+  --accent: 46 65% 53%;
+  --accent-foreground: 0 0% 7%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 96%;
+
+  /* Subtle gold border */
+  --border: 46 35% 28%;
+  --input: 0 0% 20%;
+  --ring: 46 65% 53%;
+}
+
 @layer base {
+  * {
+    @apply border-border;
+  }
+
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary selection:text-primary-foreground;
+    @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-foreground;
     font-family: var(--font-sans);
-    background-image: 
-      radial-gradient(circle at 50% 0%, rgba(212, 175, 55, 0.05) 0%, transparent 50%),
-      radial-gradient(circle at 100% 100%, rgba(212, 175, 55, 0.03) 0%, transparent 50%);
-    background-attachment: fixed;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background:
+      radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.06) 0%, transparent 50%),
+      radial-gradient(circle at 100% 100%, hsl(var(--primary) / 0.04) 0%, transparent 50%);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -61,7 +112,7 @@
   .gold-gradient {
     @apply bg-gradient-to-r from-[#BF953F] via-[#FCF6BA] to-[#B38728];
   }
-  
+
   .gold-gradient-text {
     @apply gold-gradient text-transparent bg-clip-text;
   }
@@ -82,7 +133,18 @@
     pointer-events: none;
   }
 
-  /* Hide scrollbar for clean museum look */
+  /* Custom slim scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 9999px;
+  }
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { 
   Compass, 
   User, 
@@ -85,7 +86,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="p-4 border-t border-border/50">
-          <div className="mb-4 px-2 py-3 rounded-lg bg-black/40 border border-white/5 text-xs font-mono">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <span className="text-xs text-muted-foreground uppercase tracking-wider">Appearance</span>
+            <ThemeToggle />
+          </div>
+          <div className="mb-4 px-2 py-3 rounded-lg bg-black/20 dark:bg-black/40 border border-border/30 text-xs font-mono">
             <div className="flex justify-between text-muted-foreground mb-1">
               <span>XAU/USD</span>
               <span className="text-green-400">+{((goldPrice/2350 - 1) * 100).toFixed(2)}%</span>
@@ -125,8 +130,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Link href="/" className="font-serif font-bold text-xl tracking-widest gold-gradient-text">
             COINATY
           </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/search" className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-primary">
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link href="/search" className="w-9 h-9 flex items-center justify-center rounded-full border border-border bg-card hover:bg-muted hover:border-primary/50 text-primary transition-all">
               <Search className="w-4 h-4" />
             </Link>
             {!isAuthenticated && (
