@@ -34,7 +34,8 @@ export const coins = pgTable("coins", {
   category: text("category").notNull(), // e.g., Ottoman, Kingdom of Egypt, Modern
   photoUrl: text("photo_url").notNull(),
   metalType: text("metal_type"), // Optional, e.g., Gold, Silver
-  estimatedValue: integer("estimated_value").default(0), 
+  estimatedValue: integer("estimated_value").default(0),
+  numistaId: text("numista_id"), // Numista N# for linking to official page
   createdAt: timestamp("created_at").defaultNow(),
 });
 

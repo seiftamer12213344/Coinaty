@@ -5,6 +5,7 @@ import { registerAuthRoutes } from "./replit_integrations/auth";
 import { isAuthenticated } from "./replit_integrations/auth/replitAuth";
 import { api } from "@shared/routes";
 import { z } from "zod";
+import { searchNumista, getNumistaCoin } from "./numista";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -237,6 +238,31 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Seed error:", err);
       res.status(500).json({ message: "Seed failed" });
+    }
+  });
+
+  // Numista API Proxy (search)
+  app.get("/api/numista/search", async (req, res) => {
+    try {
+      const q = (req.query.q as string) || "";
+      if (!q.trim()) return res.status(200).json([]);
+      const results = await searchNumista(q);
+      res.status(200).json(results);
+    } catch (err) {
+      console.error("Numista search error:", err);
+      res.status(500).json({ message: "Search failed" });
+    }
+  });
+
+  // Numista API Proxy (single coin detail)
+  app.get("/api/numista/types/:id", async (req, res) => {
+    try {
+      const coin = await getNumistaCoin(req.params.id);
+      if (!coin) return res.status(404).json({ message: "Not found" });
+      res.status(200).json(coin);
+    } catch (err) {
+      console.error("Numista detail error:", err);
+      res.status(500).json({ message: "Failed to fetch coin details" });
     }
   });
 
