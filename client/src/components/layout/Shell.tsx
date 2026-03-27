@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -28,18 +27,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
 
-  // Mock Market Ticker State
-  const [goldPrice, setGoldPrice] = useState(2354.23);
-  const [silverPrice, setSilverPrice] = useState(28.15);
-  
-  useEffect(() => {
-    // Simulate slight price fluctuations
-    const interval = setInterval(() => {
-      setGoldPrice(prev => prev + (Math.random() > 0.5 ? 0.5 : -0.5));
-      setSilverPrice(prev => prev + (Math.random() > 0.5 ? 0.05 : -0.05));
-    }, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-background">
@@ -89,19 +76,6 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="text-xs text-muted-foreground uppercase tracking-wider">Appearance</span>
             <ThemeToggle />
           </div>
-          <div className="mb-4 px-2 py-3 rounded-lg bg-black/20 dark:bg-black/40 border border-border/30 text-xs font-mono">
-            <div className="flex justify-between text-muted-foreground mb-1">
-              <span>XAU/USD</span>
-              <span className="text-[#1c9a8f]">+{((goldPrice/2350 - 1) * 100).toFixed(2)}%</span>
-            </div>
-            <div className="text-lg text-primary">${goldPrice.toFixed(2)}</div>
-            <div className="flex justify-between text-muted-foreground mt-2 mb-1">
-              <span>XAG/USD</span>
-              <span className="text-[#16978c]">+{((silverPrice/28 - 1) * 100).toFixed(2)}%</span>
-            </div>
-            <div className="text-primary">${silverPrice.toFixed(2)}</div>
-          </div>
-
           {isAuthenticated ? (
             <button 
               onClick={() => logout()}
