@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useCreateCoin } from "@/hooks/use-coins";
 import { Shell } from "@/components/layout/Shell";
 import {
   Search, Upload, ChevronRight, X, Loader2, Sparkles,
-  PencilLine, ExternalLink, CheckCircle2, ArrowLeft
+  PencilLine, ExternalLink, CheckCircle2, ArrowLeft, ImagePlus, Link as LinkIcon
 } from "lucide-react";
 
 interface NumistaResult {
@@ -27,6 +27,154 @@ interface NumistaDetail extends NumistaResult {
 type Mode = "search" | "selected" | "manual";
 
 const FIELD_CLASS = "w-full bg-background border border-border rounded-xl py-3 px-4 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-colors";
+
+// ── Reusable image upload field ────────────────────────────────────────────
+interface ImageUploadFieldProps {
+  label: string;
+  badge: string;
+  badgeVariant: "primary" | "muted";
+  hint: string;
+  value: string;
+  onChange: (url: string) => void;
+  autoFilled?: boolean;
+  testId: string;
+}
+
+function ImageUploadField({ label, badge, badgeVariant, hint, value, onChange, autoFilled, testId }: ImageUploadFieldProps) {
+  const [uploading, setUploading] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = useCallback(async (file: File) => {
+    if (!file.type.startsWith("image/")) { setUploadError("Please select an image file."); return; }
+    if (file.size > 8 * 1024 * 1024) { setUploadError("File must be under 8 MB."); return; }
+    setUploadError("");
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("image", file);
+      const res = await fetch("/api/upload", { method: "POST", body: form, credentials: "include" });
+      if (!res.ok) throw new Error("Upload failed");
+      const { url } = await res.json();
+      onChange(url);
+    } catch {
+      setUploadError("Upload failed. Try again or paste a URL.");
+    } finally {
+      setUploading(false);
+    }
+  }, [onChange]);
+
+  const onDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  }, [handleFile]);
+
+  const isPrimary = badgeVariant === "primary";
+
+  return (
+    <div className="space-y-2">
+      {/* Label row */}
+      <div className="flex items-center gap-2">
+        <span className={`text-xs font-semibold uppercase tracking-widest rounded-full px-2 py-0.5 border ${
+          isPrimary ? "text-primary bg-primary/10 border-primary/20" : "text-muted-foreground bg-muted border-border"
+        }`}>
+          {badge}
+        </span>
+        <span className="text-xs text-muted-foreground">{hint}</span>
+      </div>
+
+      {/* Drop zone / preview */}
+      <div
+        data-testid={`${testId}-dropzone`}
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={onDrop}
+        onClick={() => !uploading && fileRef.current?.click()}
+        className={`relative h-36 rounded-2xl border-2 border-dashed cursor-pointer transition-all overflow-hidden flex items-center justify-center ${
+          dragOver
+            ? "border-primary bg-primary/10 scale-[1.01]"
+            : value
+              ? "border-border/40 bg-black/20 dark:bg-black/40"
+              : isPrimary
+                ? "border-primary/40 bg-primary/5 hover:border-primary/70 hover:bg-primary/10"
+                : "border-border/50 bg-black/10 dark:bg-black/20 hover:border-border"
+        }`}
+      >
+        {uploading ? (
+          <div className="flex flex-col items-center gap-2 text-primary">
+            <Loader2 className="w-7 h-7 animate-spin" />
+            <span className="text-xs font-medium">Uploading…</span>
+          </div>
+        ) : value ? (
+          <>
+            <img
+              src={value}
+              alt={label}
+              className="w-full h-full object-contain p-2"
+              onError={e => ((e.target as HTMLImageElement).style.opacity = "0.3")}
+            />
+            <button
+              type="button"
+              onClick={e => { e.stopPropagation(); onChange(""); }}
+              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 hover:bg-red-600 text-white flex items-center justify-center transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </>
+        ) : (
+          <div className={`flex flex-col items-center gap-1.5 ${isPrimary ? "text-primary/40" : "text-muted-foreground/30"}`}>
+            <ImagePlus className="w-8 h-8" />
+            <span className="text-xs font-medium">{dragOver ? "Drop to upload" : "Click or drag photo here"}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileRef}
+        data-testid={testId}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
+      />
+
+      {/* Error */}
+      {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
+
+      {/* Auto-filled badge */}
+      {autoFilled && value && !uploadError && (
+        <p className="text-xs text-primary flex items-center gap-1">
+          <CheckCircle2 className="w-3 h-3" /> Auto-filled from Numista
+        </p>
+      )}
+
+      {/* URL toggle */}
+      <button
+        type="button"
+        onClick={() => setShowUrlInput(v => !v)}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <LinkIcon className="w-3 h-3" />
+        {showUrlInput ? "Hide URL input" : "Or paste a URL instead"}
+      </button>
+      {showUrlInput && (
+        <input
+          type="url"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="https://example.com/coin.jpg"
+          className={FIELD_CLASS + " text-sm"}
+        />
+      )}
+    </div>
+  );
+}
+// ──────────────────────────────────────────────────────────────────────────
 
 function yearLabel(min?: number, max?: number) {
   if (!min && !max) return "";
@@ -319,65 +467,26 @@ export default function AddCoin() {
                 <label className="text-sm font-semibold text-foreground uppercase tracking-wider">
                   Coin Photos
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                  {/* Obverse (Front) */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-widest text-primary bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">Obverse</span>
-                      <span className="text-xs text-muted-foreground">Front face · Required</span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <div className="h-32 rounded-2xl bg-black/20 dark:bg-black/50 border border-dashed border-primary/50 flex items-center justify-center overflow-hidden">
-                        {formData.photoUrl ? (
-                          <img src={formData.photoUrl} alt="Obverse preview" className="w-full h-full object-contain p-2"
-                            onError={e => ((e.target as HTMLImageElement).style.display = "none")} />
-                        ) : (
-                          <div className="flex flex-col items-center gap-1.5 text-primary/30">
-                            <Upload className="w-7 h-7" />
-                            <span className="text-xs">Front Face</span>
-                          </div>
-                        )}
-                      </div>
-                      <input type="url" name="photoUrl" value={formData.photoUrl} onChange={handleChange}
-                        data-testid="input-photo-front"
-                        placeholder="https://example.com/front.jpg"
-                        className={FIELD_CLASS}
-                      />
-                      {mode === "selected" && formData.photoUrl && (
-                        <p className="text-xs text-primary flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> Auto-filled from Numista
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Reverse (Back) */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground bg-muted border border-border rounded-full px-2 py-0.5">Reverse</span>
-                      <span className="text-xs text-muted-foreground">Back face · Optional</span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <div className="h-32 rounded-2xl bg-black/20 dark:bg-black/50 border border-dashed border-border/50 flex items-center justify-center overflow-hidden">
-                        {formData.backPhotoUrl ? (
-                          <img src={formData.backPhotoUrl} alt="Reverse preview" className="w-full h-full object-contain p-2"
-                            onError={e => ((e.target as HTMLImageElement).style.display = "none")} />
-                        ) : (
-                          <div className="flex flex-col items-center gap-1.5 text-muted-foreground/30">
-                            <Upload className="w-7 h-7" />
-                            <span className="text-xs">Back Face</span>
-                          </div>
-                        )}
-                      </div>
-                      <input type="url" name="backPhotoUrl" value={formData.backPhotoUrl} onChange={handleChange}
-                        data-testid="input-photo-back"
-                        placeholder="https://example.com/back.jpg"
-                        className={FIELD_CLASS}
-                      />
-                    </div>
-                  </div>
-
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <ImageUploadField
+                    label="Obverse"
+                    badge="Obverse"
+                    badgeVariant="primary"
+                    hint="Front face · Required"
+                    value={formData.photoUrl}
+                    onChange={url => setFormData(prev => ({ ...prev, photoUrl: url }))}
+                    autoFilled={mode === "selected"}
+                    testId="input-photo-front"
+                  />
+                  <ImageUploadField
+                    label="Reverse"
+                    badge="Reverse"
+                    badgeVariant="muted"
+                    hint="Back face · Optional"
+                    value={formData.backPhotoUrl}
+                    onChange={url => setFormData(prev => ({ ...prev, backPhotoUrl: url }))}
+                    testId="input-photo-back"
+                  />
                 </div>
               </div>
 

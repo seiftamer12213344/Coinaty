@@ -7,6 +7,31 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { searchNumista, getNumistaCoin } from "./numista";
 import OpenAI from "openai";
+import multer from "multer";
+import path from "path";
+import { fileURLToPath } from "url";
+import { randomUUID } from "crypto";
+import fs from "fs";
+
+// Multer — file upload config
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.join(__dirname, "..", "public", "uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || ".jpg";
+      cb(null, `${randomUUID()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Only image files are allowed"));
+  },
+});
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -270,6 +295,13 @@ export async function registerRoutes(
       console.error("Numista detail error:", err);
       res.status(500).json({ message: "Failed to fetch coin details" });
     }
+  });
+
+  // Image upload endpoint
+  app.post("/api/upload", isAuthenticated, upload.single("image"), (req: any, res) => {
+    if (!req.file) return res.status(400).json({ message: "No image file provided" });
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
   });
 
   // Watchlist routes (auth required)
