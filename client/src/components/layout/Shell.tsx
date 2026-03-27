@@ -4,9 +4,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CoinChatbot } from "@/components/CoinChatbot";
 import { useTheme } from "@/components/ThemeProvider";
-import logoGold from "@assets/Screen_Shot_2026-03-27_at_11.51.41_AM_1774605154890.png";
-import logoDark from "@assets/Screen_Shot_2026-03-27_at_11.51.53_AM_1774605154892.png";
-import logoWhite from "@assets/Screen_Shot_2026-03-27_at_11.52.03_AM_1774605154893.png";
+import logoDarkMode from "@assets/Screen_Shot_2026-03-27_at_11.55.29_AM_1774605354354.png";
+import logoLightMode from "@assets/Screen_Shot_2026-03-27_at_11.55.36_AM_1774605354357.png";
 import { 
   Compass, 
   User, 
@@ -31,7 +30,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme } = useTheme();
 
-  const logo = theme === "dark" ? logoGold : logoDark;
+  const logo = theme === "dark" ? logoDarkMode : logoLightMode;
 
   // Mock Market Ticker State
   const [goldPrice, setGoldPrice] = useState(2354.23);
@@ -50,9 +49,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col md:flex-row bg-background">
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card/50 backdrop-blur-xl fixed h-screen z-40">
-        <div className="p-6 pb-2">
+        <div className="px-2 pt-2 pb-1">
           <Link href="/" className="block">
-            <img src={logo} alt="Coinaty" className="h-20 w-auto object-contain" />
+            <img src={logo} alt="Coinaty" className="w-full h-auto object-contain rounded-xl" />
           </Link>
         </div>
 
@@ -130,7 +129,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         {/* Mobile Header */}
         <header className="md:hidden sticky top-0 z-40 bg-card/80 backdrop-blur-xl border-b border-border/50 px-4 py-3 flex items-center justify-between">
           <Link href="/" className="block">
-            <img src={logo} alt="Coinaty" className="h-10 w-auto object-contain" />
+            <img src={logo} alt="Coinaty" className="h-9 w-auto object-contain rounded-lg" />
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
