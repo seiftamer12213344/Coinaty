@@ -9,17 +9,22 @@ import { fileURLToPath } from "url";
 const app = express();
 const httpServer = createServer(app);
 
+// Secure Session Secret Check
+const sessionSecret = process.env.SESSION_SECRET || (() => {
+  console.error('SESSION_SECRET is not set');
+  process.exit(1);
+})();
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
   }
 }
 
-// --- ADDED HEALTH CHECK FOR REPLIT DEPLOYMENT ---
+// Health check for Replit deployment agent
 app.get("/health", (_req, res) => {
   res.status(200).send("ok");
 });
-// ------------------------------------------------
 
 app.use(
   express.json({
@@ -31,7 +36,6 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
-// Serve uploaded files as static assets
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(
   "/uploads",
@@ -45,7 +49,6 @@ export function log(message: string, source = "express") {
     second: "2-digit",
     hour12: true,
   });
-
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
@@ -67,11 +70,9 @@ app.use((req, res, next) => {
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
       }
-
       log(logLine);
     }
   });
-
   next();
 });
 
@@ -82,13 +83,8 @@ app.use((req, res, next) => {
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
-
     console.error("Internal Server Error:", err);
-
-    if (res.headersSent) {
-      return next(err);
-    }
-
+    if (res.headersSent) return next(err);
     return res.status(status).json({ message });
   });
 
@@ -101,8 +97,6 @@ app.use((req, res, next) => {
 
   const PORT = Number(process.env.PORT) || 5000;
 
-  // Use httpServer.listen instead of app.listen to ensure
-  // Socket.io or other HTTP integrations work correctly
   httpServer.listen(PORT, "0.0.0.0", () => {
     log(`Server is active on port ${PORT}`);
   });
