@@ -272,6 +272,33 @@ export async function registerRoutes(
     }
   });
 
+  // Watchlist routes (auth required)
+  app.get("/api/watchlist", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const coins = await storage.getWatchlist(userId);
+      res.json(coins);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.get("/api/watchlist/:coinId/status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const coinId = parseInt(req.params.coinId);
+      const inWatchlist = await storage.isInWatchlist(userId, coinId);
+      res.json({ inWatchlist });
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.post("/api/watchlist/:coinId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const coinId = parseInt(req.params.coinId);
+      const result = await storage.toggleWatchlist(userId, coinId);
+      res.json(result);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
   // AI Coin Expert Chatbot (streaming)
   app.post("/api/chatbot", async (req, res) => {
     try {

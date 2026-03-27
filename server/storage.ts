@@ -1,4 +1,4 @@
-import { coins, coinLikes, comments, messages, users as usersTable, type User, type Coin, type CoinLike, type Comment, type Message, type InsertCoin } from "@shared/schema";
+import { coins, coinLikes, comments, messages, users as usersTable, watchlistItems, type User, type Coin, type CoinLike, type Comment, type Message, type WatchlistItem, type InsertCoin } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, inArray, sql, ilike } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth";
@@ -29,6 +29,11 @@ export interface IStorage extends IAuthStorage {
   getConversations(userId: string): Promise<User[]>;
   getMessages(userId1: string, userId2: string): Promise<Message[]>;
   sendMessage(senderId: string, receiverId: string, content: string): Promise<Message>;
+
+  // Watchlist
+  getWatchlist(userId: string): Promise<Coin[]>;
+  isInWatchlist(userId: string, coinId: number): Promise<boolean>;
+  toggleWatchlist(userId: string, coinId: number): Promise<{ added: boolean }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -185,6 +190,33 @@ export class DatabaseStorage implements IStorage {
       content
     }).returning();
     return msg;
+  }
+
+  async getWatchlist(userId: string): Promise<Coin[]> {
+    const items = await db.select().from(watchlistItems)
+      .where(eq(watchlistItems.userId, userId))
+      .orderBy(desc(watchlistItems.createdAt));
+    if (items.length === 0) return [];
+    const coinIds = items.map(i => i.coinId);
+    return await db.select().from(coins).where(inArray(coins.id, coinIds));
+  }
+
+  async isInWatchlist(userId: string, coinId: number): Promise<boolean> {
+    const [item] = await db.select().from(watchlistItems)
+      .where(and(eq(watchlistItems.userId, userId), eq(watchlistItems.coinId, coinId)));
+    return !!item;
+  }
+
+  async toggleWatchlist(userId: string, coinId: number): Promise<{ added: boolean }> {
+    const existing = await this.isInWatchlist(userId, coinId);
+    if (existing) {
+      await db.delete(watchlistItems)
+        .where(and(eq(watchlistItems.userId, userId), eq(watchlistItems.coinId, coinId)));
+      return { added: false };
+    } else {
+      await db.insert(watchlistItems).values({ userId, coinId });
+      return { added: true };
+    }
   }
 }
 

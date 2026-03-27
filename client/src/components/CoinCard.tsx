@@ -1,10 +1,11 @@
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Heart, MessageSquare, ExternalLink, BadgeCheck, Trash2 } from "lucide-react";
+import { Heart, MessageSquare, ExternalLink, BadgeCheck, Trash2, Bookmark } from "lucide-react";
 import type { Coin } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useToggleLike, useCoinLikes, useComments, useDeleteCoin } from "@/hooks/use-coins";
 import { useUserProfile } from "@/hooks/use-users";
+import { useWatchlistStatus, useToggleWatchlist } from "@/hooks/use-watchlist";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,15 +14,18 @@ export function CoinCard({ coin }: { coin: Coin }) {
   const { user } = useAuth();
   const toggleLike = useToggleLike();
   const deleteCoin = useDeleteCoin();
+  const toggleWatchlist = useToggleWatchlist();
   const { data: likes } = useCoinLikes(coin.id);
   const { data: comments } = useComments(coin.id);
   const { data: owner } = useUserProfile(coin.userId);
+  const { data: watchlistStatus } = useWatchlistStatus(coin.id);
   
   const [showLikes, setShowLikes] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const hasLiked = likes?.some(u => u.id === user?.id) || false;
   const isOwner = user?.id === coin.userId;
+  const isWatchlisted = watchlistStatus?.inWatchlist || false;
   const numistaLink = `https://en.numista.com/catalogue/index.php?e=&r=${encodeURIComponent(coin.title)}`;
 
   const getMetalGlow = (metal: string | null) => {
@@ -144,16 +148,34 @@ export function CoinCard({ coin }: { coin: Coin }) {
             </Link>
           </div>
 
-          <a 
-            href={numistaLink} 
-            target="_blank" 
-            rel="noreferrer"
-            data-testid={`link-check-value-${coin.id}`}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-primary/10 border border-white/10 hover:border-primary/50 text-xs font-medium text-foreground transition-all"
-          >
-            Check Value
-            <ExternalLink className="w-3 h-3" />
-          </a>
+          <div className="flex items-center gap-2">
+            <button
+              data-testid={`button-watchlist-${coin.id}`}
+              onClick={() => {
+                if (!user) { window.location.href = "/api/login"; return; }
+                toggleWatchlist.mutate(coin.id);
+              }}
+              disabled={toggleWatchlist.isPending}
+              title={isWatchlisted ? "Remove from Watchlist" : "Add to Watchlist"}
+              className={`p-2 rounded-lg border transition-all ${
+                isWatchlisted
+                  ? "bg-primary/15 border-primary/40 text-primary"
+                  : "bg-white/5 border-white/10 text-muted-foreground hover:border-primary/40 hover:text-primary"
+              }`}
+            >
+              <Bookmark className={`w-4 h-4 ${isWatchlisted ? "fill-primary" : ""}`} />
+            </button>
+            <a 
+              href={numistaLink} 
+              target="_blank" 
+              rel="noreferrer"
+              data-testid={`link-check-value-${coin.id}`}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 hover:bg-primary/10 border border-white/10 hover:border-primary/50 text-xs font-medium text-foreground transition-all"
+            >
+              Check Value
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
         </div>
       </div>
       {/* Likes Dialog */}

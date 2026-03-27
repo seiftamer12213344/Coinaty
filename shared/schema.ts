@@ -86,6 +86,18 @@ export const commentsRelations = relations(comments, ({ one }) => ({
 }));
 
 
+export const watchlistItems = pgTable("watchlist_items", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  coinId: integer("coin_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const watchlistRelations = relations(watchlistItems, ({ one }) => ({
+  user: one(users, { fields: [watchlistItems.userId], references: [users.id] }),
+  coin: one(coins, { fields: [watchlistItems.coinId], references: [coins.id] }),
+}));
+
 // Zod Schemas
 export const insertCoinSchema = createInsertSchema(coins).omit({ 
   id: true, createdAt: true, userId: true 
@@ -103,5 +115,6 @@ export type Coin = typeof coins.$inferSelect;
 export type CoinLike = typeof coinLikes.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
 export type Message = typeof messages.$inferSelect;
+export type WatchlistItem = typeof watchlistItems.$inferSelect;
 
 export type InsertCoin = z.infer<typeof insertCoinSchema>;

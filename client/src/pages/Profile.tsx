@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserProfile, useUpdateProfile } from "@/hooks/use-users";
 import { useCoins } from "@/hooks/use-coins";
+import { useWatchlist } from "@/hooks/use-watchlist";
 import { Shell } from "@/components/layout/Shell";
 import { CoinCard } from "@/components/CoinCard";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { Settings, Shield, MapPin, CalendarDays, Edit3, MessageSquare, X } from "lucide-react";
+import { Shield, MapPin, CalendarDays, Edit3, MessageSquare, Bookmark, PlusCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ export default function Profile() {
 
   const { data: profile, isLoading: profileLoading } = useUserProfile(targetId);
   const { data: userCoins, isLoading: coinsLoading } = useCoins({ userId: targetId });
+  const { data: watchlistCoins, isLoading: watchlistLoading } = useWatchlist();
   const updateProfile = useUpdateProfile();
 
   const [activeTab, setActiveTab] = useState<"vault" | "wishlist">("vault");
@@ -157,10 +159,17 @@ export default function Profile() {
               {activeTab === 'vault' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_8px_rgba(212,175,55,0.8)]" />}
             </button>
             <button 
+              data-testid="tab-wishlist"
               onClick={() => setActiveTab("wishlist")}
-              className={`pb-4 font-serif text-lg tracking-wide transition-all relative ${activeTab === 'wishlist' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`pb-4 font-serif text-lg tracking-wide transition-all relative flex items-center gap-2 ${activeTab === 'wishlist' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              Wishlist
+              <Bookmark className="w-4 h-4" />
+              Watchlist
+              {isOwnProfile && watchlistCoins && watchlistCoins.length > 0 && (
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-sans">
+                  {watchlistCoins.length}
+                </span>
+              )}
               {activeTab === 'wishlist' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_8px_rgba(212,175,55,0.8)]" />}
             </button>
           </div>
@@ -183,10 +192,52 @@ export default function Profile() {
             )}
 
             {activeTab === 'wishlist' && (
-               <div className="text-center py-20 bg-card/30 rounded-2xl border border-dashed border-border/50">
-                  <p className="text-muted-foreground italic">"A collector's work is never done."</p>
-                  <p className="text-sm mt-2 text-primary/60">Wishlist feature coming in next exhibition.</p>
+              isOwnProfile ? (
+                <>
+                  {/* Add Coins CTA */}
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="text-sm text-muted-foreground">
+                      Bookmark coins from the gallery using the <Bookmark className="w-3.5 h-3.5 inline text-primary mx-0.5" /> button.
+                    </p>
+                    <Link href="/">
+                      <button
+                        data-testid="button-add-to-watchlist"
+                        className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary rounded-xl text-sm font-medium transition-all"
+                      >
+                        <PlusCircle className="w-4 h-4" />
+                        Browse Gallery
+                      </button>
+                    </Link>
+                  </div>
+
+                  {watchlistLoading ? (
+                    <LoadingSpinner />
+                  ) : !watchlistCoins || watchlistCoins.length === 0 ? (
+                    <div className="text-center py-20 bg-card/30 rounded-2xl border border-dashed border-border/50">
+                      <Bookmark className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                      <p className="text-muted-foreground font-medium">Your watchlist is empty.</p>
+                      <p className="text-sm text-muted-foreground/60 mt-1 mb-5">Save coins you're interested in to track them here.</p>
+                      <Link href="/">
+                        <button className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary rounded-xl text-sm font-medium transition-all">
+                          <PlusCircle className="w-4 h-4" />
+                          Explore the Gallery
+                        </button>
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {watchlistCoins.map((coin) => (
+                        <CoinCard key={coin.id} coin={coin} />
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-20 bg-card/30 rounded-2xl border border-dashed border-border/50">
+                  <Bookmark className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-muted-foreground italic">Watchlists are private.</p>
                 </div>
+              )
             )}
           </div>
         </div>
