@@ -15,6 +15,12 @@ declare module "http" {
   }
 }
 
+// --- ADDED HEALTH CHECK FOR REPLIT DEPLOYMENT ---
+app.get("/health", (_req, res) => {
+  res.status(200).send("ok");
+});
+// ------------------------------------------------
+
 app.use(
   express.json({
     verify: (req, _res, buf) => {
@@ -27,7 +33,10 @@ app.use(express.urlencoded({ extended: false }));
 
 // Serve uploaded files as static assets
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-app.use("/uploads", express.static(path.join(__dirname, "..", "public", "uploads")));
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "..", "public", "uploads")),
+);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -83,9 +92,6 @@ app.use((req, res, next) => {
     return res.status(status).json({ message });
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
@@ -93,19 +99,11 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  const PORT = Number(process.env.PORT) || 5000;
+
+  // Use httpServer.listen instead of app.listen to ensure
+  // Socket.io or other HTTP integrations work correctly
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    log(`Server is active on port ${PORT}`);
+  });
 })();
