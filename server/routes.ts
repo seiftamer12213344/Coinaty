@@ -335,7 +335,7 @@ export async function registerRoutes(
   app.post("/api/chatbot", async (req, res) => {
     try {
       const { messages: history } = req.body as {
-        messages: { role: "user" | "assistant"; content: string }[];
+        messages: { role: "user" | "assistant"; content: string; imageUrl?: string }[];
       };
       if (!Array.isArray(history) || history.length === 0) {
         return res.status(400).json({ message: "Messages are required" });
@@ -344,6 +344,20 @@ export async function registerRoutes(
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
+
+      // Convert history to OpenAI message format, supporting vision (image_url) content
+      const openaiMessages = history.map(msg => {
+        if (msg.role === "user" && msg.imageUrl) {
+          const contentParts: any[] = [
+            { type: "image_url", image_url: { url: msg.imageUrl, detail: "high" } },
+          ];
+          if (msg.content) {
+            contentParts.push({ type: "text", text: msg.content });
+          }
+          return { role: "user" as const, content: contentParts };
+        }
+        return { role: msg.role, content: msg.content || "" };
+      });
 
       const stream = await openai.chat.completions.create({
         model: "gpt-5.1",
@@ -365,9 +379,11 @@ Your expertise covers:
 - Numista catalog references and how to catalog coins
 - Notable mints and their marks
 
+When a user shares a coin image, analyze it thoroughly: identify the coin type, estimate the grade/condition, note any visible features (devices, legends, mint marks), and provide historical context. Be as specific as possible based on what you can see.
+
 Keep responses concise and engaging. Use bullet points for clarity when listing multiple items. Always be helpful and encourage exploration of the hobby. If asked about specific coins, share interesting historical facts.`,
           },
-          ...history,
+          ...openaiMessages,
         ],
       });
 

@@ -1,8 +1,12 @@
-import { useState, useRef, useEffect } from "react";
-import { Bot, X, Send, RotateCcw, Sparkles, ChevronDown, Loader2, AlertCircle } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Bot, X, Send, RotateCcw, Sparkles, ChevronDown, Loader2, AlertCircle, Plus, ImageIcon } from "lucide-react";
 
 type Role = "user" | "assistant";
-interface ChatMessage { role: Role; content: string; }
+interface ChatMessage {
+  role: Role;
+  content: string;
+  imageUrl?: string; // base64 data URL for user-attached images
+}
 
 const SUGGESTED = [
   "How do I grade a coin?",
@@ -42,37 +46,52 @@ function MessageBubble({ msg, isStreaming }: { msg: ChatMessage; isStreaming?: b
           <Bot className="w-3.5 h-3.5 text-primary" />
         </div>
       )}
-      <div
-        className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-          isUser
-            ? "bg-primary text-primary-foreground rounded-br-sm"
-            : "bg-card border border-border/60 text-foreground rounded-bl-sm"
-        }`}
-      >
-        {lines.map((line, i) => {
-          const isBullet = line.match(/^[-•*]\s/);
-          const isNumbered = line.match(/^\d+\.\s/);
-          const isHeading = line.match(/^#{1,3}\s/);
-          const trimmed = isBullet ? line.slice(2) : isNumbered ? line.replace(/^\d+\.\s/, "") : isHeading ? line.replace(/^#{1,3}\s/, "") : line;
+      <div className={`max-w-[82%] flex flex-col gap-1.5 ${isUser ? "items-end" : "items-start"}`}>
+        {/* Image attachment */}
+        {isUser && msg.imageUrl && (
+          <div className="rounded-2xl rounded-br-sm overflow-hidden border border-primary/30 shadow-md max-w-[200px]">
+            <img src={msg.imageUrl} alt="Attached coin" className="w-full object-cover" />
+          </div>
+        )}
+        {/* Text bubble — only render if there's text */}
+        {msg.content && (
+          <div
+            className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+              isUser
+                ? "bg-primary text-primary-foreground rounded-br-sm"
+                : "bg-card border border-border/60 text-foreground rounded-bl-sm"
+            }`}
+          >
+            {lines.map((line, i) => {
+              const isBullet = line.match(/^[-•*]\s/);
+              const isNumbered = line.match(/^\d+\.\s/);
+              const isHeading = line.match(/^#{1,3}\s/);
+              const trimmed = isBullet ? line.slice(2) : isNumbered ? line.replace(/^\d+\.\s/, "") : isHeading ? line.replace(/^#{1,3}\s/, "") : line;
 
-          if (isHeading) {
-            return <p key={i} className="font-semibold text-primary mt-1.5 mb-0.5"><MarkdownText text={trimmed} /></p>;
-          }
-          if (isBullet || isNumbered) {
-            return (
-              <div key={i} className="flex gap-2 mt-0.5">
-                <span className={`flex-shrink-0 mt-1 ${isUser ? "text-primary-foreground/70" : "text-primary"}`}>
-                  {isNumbered ? "›" : "•"}
-                </span>
-                <span><MarkdownText text={trimmed} /></span>
-              </div>
-            );
-          }
-          if (line === "") return <div key={i} className="h-1.5" />;
-          return <p key={i}><MarkdownText text={line} /></p>;
-        })}
-        {isStreaming && (
-          <span className="inline-block w-1.5 h-4 bg-current opacity-70 animate-pulse ml-0.5 rounded-sm" />
+              if (isHeading) {
+                return <p key={i} className="font-semibold text-primary mt-1.5 mb-0.5"><MarkdownText text={trimmed} /></p>;
+              }
+              if (isBullet || isNumbered) {
+                return (
+                  <div key={i} className="flex gap-2 mt-0.5">
+                    <span className={`flex-shrink-0 mt-1 ${isUser ? "text-primary-foreground/70" : "text-primary"}`}>
+                      {isNumbered ? "›" : "•"}
+                    </span>
+                    <span><MarkdownText text={trimmed} /></span>
+                  </div>
+                );
+              }
+              if (line === "") return <div key={i} className="h-1.5" />;
+              return <p key={i}><MarkdownText text={line} /></p>;
+            })}
+            {isStreaming && (
+              <span className="inline-block w-1.5 h-4 bg-current opacity-70 animate-pulse ml-0.5 rounded-sm" />
+            )}
+          </div>
+        )}
+        {/* Image-only message with streaming */}
+        {isUser && msg.imageUrl && !msg.content && isStreaming && (
+          <span className="inline-block w-1.5 h-4 bg-primary opacity-70 animate-pulse rounded-sm" />
         )}
       </div>
     </div>
@@ -86,8 +105,10 @@ export function CoinChatbot() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [unread, setUnread] = useState(0);
+  const [pendingImage, setPendingImage] = useState<string | null>(null); // base64 preview
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -100,13 +121,29 @@ export function CoinChatbot() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = async (text: string) => {
+  const handleFileSelect = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > 8 * 1024 * 1024) { setError("Image must be under 8 MB."); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      const dataUrl = e.target?.result as string;
+      setPendingImage(dataUrl);
+      inputRef.current?.focus();
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
+  const sendMessage = async (text: string, imageUrl?: string) => {
     const userText = text.trim();
-    if (!userText || isLoading) return;
+    if (!userText && !imageUrl) return;
+    if (isLoading) return;
 
     setError("");
     setInput("");
-    const newHistory: ChatMessage[] = [...messages, { role: "user", content: userText }];
+    setPendingImage(null);
+
+    const userMsg: ChatMessage = { role: "user", content: userText, imageUrl };
+    const newHistory: ChatMessage[] = [...messages, userMsg];
     setMessages(newHistory);
     setIsLoading(true);
 
@@ -153,7 +190,7 @@ export function CoinChatbot() {
           } catch {}
         }
       }
-    } catch (e) {
+    } catch {
       setError("Numis is temporarily unavailable. Please try again.");
       setMessages(prev => prev.slice(0, -1));
     } finally {
@@ -163,13 +200,14 @@ export function CoinChatbot() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    sendMessage(input);
+    sendMessage(input, pendingImage || undefined);
   };
 
   const clearChat = () => {
     setMessages([]);
     setError("");
     setInput("");
+    setPendingImage(null);
   };
 
   return (
@@ -206,7 +244,7 @@ export function CoinChatbot() {
         }`}
       >
         <div className="bg-card border border-border/60 rounded-3xl shadow-2xl flex flex-col overflow-hidden" style={{ height: "520px" }}>
-          
+
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-4 border-b border-border/40 bg-gradient-to-r from-primary/10 to-transparent flex-shrink-0">
             <div className="w-9 h-9 rounded-full bg-primary/20 border border-primary/60 flex items-center justify-center gold-border-glow">
@@ -223,7 +261,7 @@ export function CoinChatbot() {
             </div>
             <button
               onClick={clearChat}
-              disabled={messages.length === 0}
+              disabled={messages.length === 0 && !pendingImage}
               title="Clear chat"
               className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 transition-colors"
             >
@@ -236,7 +274,7 @@ export function CoinChatbot() {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-            {messages.length === 0 && (
+            {messages.length === 0 && !pendingImage && (
               <div className="flex flex-col items-center justify-center h-full text-center px-4 pb-4">
                 <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mb-4 gold-border-glow">
                   <Bot className="w-8 h-8 text-primary" />
@@ -244,6 +282,10 @@ export function CoinChatbot() {
                 <p className="font-serif text-base font-bold text-foreground mb-1">Ask Numis</p>
                 <p className="text-xs text-muted-foreground mb-5">
                   Your AI companion for all things numismatic — grading, history, valuation, authentication, and more.
+                  <br />
+                  <span className="text-primary/70 font-medium mt-1 inline-flex items-center gap-1">
+                    <ImageIcon className="w-3 h-3" /> You can also attach a coin photo for analysis.
+                  </span>
                 </p>
                 <div className="grid grid-cols-2 gap-2 w-full">
                   {SUGGESTED.map((q) => (
@@ -288,21 +330,71 @@ export function CoinChatbot() {
             <div ref={bottomRef} />
           </div>
 
+          {/* Image preview strip (pending attachment) */}
+          {pendingImage && (
+            <div className="px-3 pt-2 flex-shrink-0">
+              <div className="relative inline-block">
+                <img
+                  src={pendingImage}
+                  alt="Pending attachment"
+                  className="h-16 w-16 object-cover rounded-xl border border-primary/40 shadow"
+                />
+                <button
+                  type="button"
+                  onClick={() => setPendingImage(null)}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-background border border-border shadow flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Input */}
           <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-3 border-t border-border/40 flex-shrink-0 bg-card/50">
+            {/* Hidden file input */}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              data-testid="input-chatbot-image"
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) handleFileSelect(file);
+                e.target.value = "";
+              }}
+            />
+
+            {/* Attach button */}
+            <button
+              type="button"
+              data-testid="button-chatbot-attach"
+              onClick={() => fileRef.current?.click()}
+              disabled={isLoading}
+              title="Attach a coin photo"
+              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all flex-shrink-0 disabled:opacity-40 ${
+                pendingImage
+                  ? "bg-primary/15 border-primary/50 text-primary"
+                  : "bg-background border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
+              }`}
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+
             <input
               ref={inputRef}
               data-testid="input-chatbot-message"
               value={input}
               onChange={e => setInput(e.target.value)}
-              placeholder="Ask about coins, grading, history..."
+              placeholder={pendingImage ? "Ask about this coin..." : "Ask about coins, grading, history..."}
               disabled={isLoading}
               className="flex-1 bg-background border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/40 transition-colors placeholder:text-muted-foreground/60 disabled:opacity-50"
             />
             <button
               data-testid="button-chatbot-send"
               type="submit"
-              disabled={!input.trim() || isLoading}
+              disabled={(!input.trim() && !pendingImage) || isLoading}
               className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-40 hover:bg-primary/90 transition-colors flex-shrink-0"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
