@@ -53,6 +53,7 @@ export default function AddCoin() {
     description: "",
     category: "Ottoman",
     photoUrl: "",
+    backPhotoUrl: "",
     metalType: "Silver",
     estimatedValue: "",
     numistaId: "",
@@ -145,6 +146,7 @@ export default function AddCoin() {
     createCoin.mutate({
       ...formData,
       photoUrl: finalPhotoUrl,
+      backPhotoUrl: formData.backPhotoUrl.trim() || undefined,
       estimatedValue: formData.estimatedValue ? Number(formData.estimatedValue) : 0,
     }, {
       onSuccess: () => setLocation("/"),
@@ -157,7 +159,7 @@ export default function AddCoin() {
     setResults([]);
     setSelectedMeta(null);
     setSearchError("");
-    setFormData({ title: "", description: "", category: "Ottoman", photoUrl: "", metalType: "Silver", estimatedValue: "", numistaId: "" });
+    setFormData({ title: "", description: "", category: "Ottoman", photoUrl: "", backPhotoUrl: "", metalType: "Silver", estimatedValue: "", numistaId: "" });
   };
 
   if (authLoading) return null;
@@ -312,28 +314,70 @@ export default function AddCoin() {
 
             <div className="bg-card border border-border/50 p-6 md:p-10 rounded-3xl shadow-xl space-y-8">
 
-              {/* Image */}
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-foreground uppercase tracking-wider">Artifact Image URL</label>
-                <div className="flex gap-4 items-end">
-                  <div className="w-24 h-24 rounded-2xl bg-black/20 dark:bg-black/50 border border-dashed border-primary/50 flex items-center justify-center overflow-hidden flex-shrink-0">
-                    {formData.photoUrl ? (
-                      <img src={formData.photoUrl} alt="Preview" className="w-full h-full object-cover" onError={e => ((e.target as HTMLImageElement).src = "")} />
-                    ) : (
-                      <Upload className="w-8 h-8 text-primary/30" />
-                    )}
+              {/* Images — Obverse + Reverse */}
+              <div className="space-y-3">
+                <label className="text-sm font-semibold text-foreground uppercase tracking-wider">
+                  Coin Photos
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                  {/* Obverse (Front) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-widest text-primary bg-primary/10 border border-primary/20 rounded-full px-2 py-0.5">Obverse</span>
+                      <span className="text-xs text-muted-foreground">Front face · Required</span>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <div className="h-32 rounded-2xl bg-black/20 dark:bg-black/50 border border-dashed border-primary/50 flex items-center justify-center overflow-hidden">
+                        {formData.photoUrl ? (
+                          <img src={formData.photoUrl} alt="Obverse preview" className="w-full h-full object-contain p-2"
+                            onError={e => ((e.target as HTMLImageElement).style.display = "none")} />
+                        ) : (
+                          <div className="flex flex-col items-center gap-1.5 text-primary/30">
+                            <Upload className="w-7 h-7" />
+                            <span className="text-xs">Front Face</span>
+                          </div>
+                        )}
+                      </div>
+                      <input type="url" name="photoUrl" value={formData.photoUrl} onChange={handleChange}
+                        data-testid="input-photo-front"
+                        placeholder="https://example.com/front.jpg"
+                        className={FIELD_CLASS}
+                      />
+                      {mode === "selected" && formData.photoUrl && (
+                        <p className="text-xs text-primary flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Auto-filled from Numista
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <input type="url" name="photoUrl" value={formData.photoUrl} onChange={handleChange}
-                      placeholder="https://example.com/coin.jpg"
-                      className={FIELD_CLASS}
-                    />
-                    {mode === "selected" && formData.photoUrl && (
-                      <p className="text-xs text-primary mt-1 flex items-center gap-1">
-                        <CheckCircle2 className="w-3 h-3" /> Auto-filled from Numista
-                      </p>
-                    )}
+
+                  {/* Reverse (Back) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground bg-muted border border-border rounded-full px-2 py-0.5">Reverse</span>
+                      <span className="text-xs text-muted-foreground">Back face · Optional</span>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <div className="h-32 rounded-2xl bg-black/20 dark:bg-black/50 border border-dashed border-border/50 flex items-center justify-center overflow-hidden">
+                        {formData.backPhotoUrl ? (
+                          <img src={formData.backPhotoUrl} alt="Reverse preview" className="w-full h-full object-contain p-2"
+                            onError={e => ((e.target as HTMLImageElement).style.display = "none")} />
+                        ) : (
+                          <div className="flex flex-col items-center gap-1.5 text-muted-foreground/30">
+                            <Upload className="w-7 h-7" />
+                            <span className="text-xs">Back Face</span>
+                          </div>
+                        )}
+                      </div>
+                      <input type="url" name="backPhotoUrl" value={formData.backPhotoUrl} onChange={handleChange}
+                        data-testid="input-photo-back"
+                        placeholder="https://example.com/back.jpg"
+                        className={FIELD_CLASS}
+                      />
+                    </div>
                   </div>
+
                 </div>
               </div>
 

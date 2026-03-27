@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Heart, MessageSquare, ExternalLink, BadgeCheck, Trash2, Bookmark } from "lucide-react";
+import { Heart, MessageSquare, ExternalLink, BadgeCheck, Trash2, Bookmark, FlipHorizontal2 } from "lucide-react";
 import type { Coin } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useToggleLike, useCoinLikes, useComments, useDeleteCoin } from "@/hooks/use-coins";
@@ -22,6 +22,7 @@ export function CoinCard({ coin }: { coin: Coin }) {
   
   const [showLikes, setShowLikes] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showBack, setShowBack] = useState(false);
 
   const hasLiked = likes?.some(u => u.id === user?.id) || false;
   const isOwner = user?.id === coin.userId;
@@ -88,20 +89,45 @@ export function CoinCard({ coin }: { coin: Coin }) {
           )}
         </div>
       </div>
-      {/* Image */}
-      <Link href={`/coin/${coin.id}`}>
-        <div className="relative aspect-square w-full bg-black/50 overflow-hidden cursor-pointer">
-          <div className="absolute inset-0 bg-radial-gradient from-transparent to-black/60 z-10 pointer-events-none" />
-          <img 
-            src={coin.photoUrl || "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80"} 
-            alt={coin.title}
-            className="w-full h-full object-contain p-8 transform group-hover:scale-105 transition-transform duration-700 ease-out pl-[0px] pr-[0px] pt-[0px] pb-[0px]"
+      {/* Image with flip support */}
+      <div className="relative aspect-square w-full bg-black/50 overflow-hidden">
+        <div className="absolute inset-0 bg-radial-gradient from-transparent to-black/60 z-10 pointer-events-none" />
+        <Link href={`/coin/${coin.id}`}>
+          <img
+            key={showBack ? "back" : "front"}
+            src={
+              showBack
+                ? (coin.backPhotoUrl || "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80")
+                : (coin.photoUrl || "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80")
+            }
+            alt={showBack ? `${coin.title} — Reverse` : `${coin.title} — Obverse`}
+            className="w-full h-full object-contain cursor-pointer transform group-hover:scale-105 transition-all duration-700 ease-out animate-in fade-in duration-300"
             onError={(e) => {
               (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80";
             }}
           />
+        </Link>
+
+        {/* Face label */}
+        <div className="absolute top-3 left-3 z-20">
+          <span className="text-[10px] font-semibold uppercase tracking-widest px-2 py-1 rounded-full bg-black/60 text-white/70 backdrop-blur-sm border border-white/10">
+            {showBack ? "Reverse" : "Obverse"}
+          </span>
         </div>
-      </Link>
+
+        {/* Flip button — only shown if back photo exists */}
+        {coin.backPhotoUrl && (
+          <button
+            data-testid={`button-flip-${coin.id}`}
+            onClick={(e) => { e.preventDefault(); setShowBack(b => !b); }}
+            title={showBack ? "Show Front (Obverse)" : "Show Back (Reverse)"}
+            className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 hover:bg-primary/80 backdrop-blur-sm border border-white/15 hover:border-primary text-white/80 hover:text-white text-xs font-medium transition-all"
+          >
+            <FlipHorizontal2 className="w-3.5 h-3.5" />
+            Flip
+          </button>
+        )}
+      </div>
       {/* Content */}
       <div className="p-5">
         <Link href={`/coin/${coin.id}`}>
