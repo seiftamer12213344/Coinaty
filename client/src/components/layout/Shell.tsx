@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { CoinChatbot } from "@/components/CoinChatbot";
 import { 
   Compass, 
   User, 
@@ -180,6 +181,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
           )}
         </div>
       </nav>
+
+      {/* AI Coin Expert Chatbot — visible on all pages */}
+      <CoinChatbot />
     </div>
   );
 }

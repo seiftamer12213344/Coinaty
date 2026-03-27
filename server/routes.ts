@@ -6,6 +6,12 @@ import { isAuthenticated } from "./replit_integrations/auth/replitAuth";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { searchNumista, getNumistaCoin } from "./numista";
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+});
 
 export async function registerRoutes(
   httpServer: Server,
@@ -263,6 +269,66 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Numista detail error:", err);
       res.status(500).json({ message: "Failed to fetch coin details" });
+    }
+  });
+
+  // AI Coin Expert Chatbot (streaming)
+  app.post("/api/chatbot", async (req, res) => {
+    try {
+      const { messages: history } = req.body as {
+        messages: { role: "user" | "assistant"; content: string }[];
+      };
+      if (!Array.isArray(history) || history.length === 0) {
+        return res.status(400).json({ message: "Messages are required" });
+      }
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+
+      const stream = await openai.chat.completions.create({
+        model: "gpt-5.1",
+        stream: true,
+        max_completion_tokens: 1024,
+        messages: [
+          {
+            role: "system",
+            content: `You are "Numis", the Royal Museum's resident AI coin expert for Coinaty — a social network for numismatists and coin collectors. You are knowledgeable, passionate, and approachable.
+
+Your expertise covers:
+- Coin grading standards (Sheldon scale, PCGS/NGC grading)
+- World numismatics: ancient, medieval, Ottoman, Egyptian kingdom, and modern coins
+- Authentication and identifying counterfeit coins
+- Coin valuation, market trends, and investment insights
+- Metal composition analysis (gold, silver, bronze, copper)
+- Historical context for coins from different eras and empires
+- Coin care, storage, and preservation best practices
+- Numista catalog references and how to catalog coins
+- Notable mints and their marks
+
+Keep responses concise and engaging. Use bullet points for clarity when listing multiple items. Always be helpful and encourage exploration of the hobby. If asked about specific coins, share interesting historical facts.`,
+          },
+          ...history,
+        ],
+      });
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || "";
+        if (content) {
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        }
+      }
+
+      res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+      res.end();
+    } catch (err) {
+      console.error("Chatbot error:", err);
+      if (res.headersSent) {
+        res.write(`data: ${JSON.stringify({ error: "AI response failed" })}\n\n`);
+        res.end();
+      } else {
+        res.status(500).json({ message: "Chatbot unavailable" });
+      }
     }
   });
 
