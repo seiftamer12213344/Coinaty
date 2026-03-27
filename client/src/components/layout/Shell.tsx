@@ -3,6 +3,10 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CoinChatbot } from "@/components/CoinChatbot";
+import { useTheme } from "@/components/ThemeProvider";
+import logoGold from "@assets/Screen_Shot_2026-03-27_at_11.51.41_AM_1774605154890.png";
+import logoDark from "@assets/Screen_Shot_2026-03-27_at_11.51.53_AM_1774605154892.png";
+import logoWhite from "@assets/Screen_Shot_2026-03-27_at_11.52.03_AM_1774605154893.png";
 import { 
   Compass, 
   User, 
@@ -25,7 +29,10 @@ const NAV_ITEMS = [
 export function Shell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
-  
+  const { theme } = useTheme();
+
+  const logo = theme === "dark" ? logoGold : logoDark;
+
   // Mock Market Ticker State
   const [goldPrice, setGoldPrice] = useState(2354.23);
   const [silverPrice, setSilverPrice] = useState(28.15);
@@ -44,13 +51,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card/50 backdrop-blur-xl fixed h-screen z-40">
         <div className="p-6 pb-2">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary flex items-center justify-center gold-border-glow">
-              <span className="font-serif font-bold text-xl text-primary">C</span>
-            </div>
-            <span className="font-serif font-bold text-2xl tracking-widest text-foreground">
-              COINATY
-            </span>
+          <Link href="/" className="block">
+            <img src={logo} alt="Coinaty" className="h-20 w-auto object-contain" />
           </Link>
         </div>
 
@@ -127,8 +129,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <main className="flex-1 md:ml-64 pb-20 md:pb-0 min-h-screen">
         {/* Mobile Header */}
         <header className="md:hidden sticky top-0 z-40 bg-card/80 backdrop-blur-xl border-b border-border/50 px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="font-serif font-bold text-xl tracking-widest gold-gradient-text">
-            COINATY
+          <Link href="/" className="block">
+            <img src={logo} alt="Coinaty" className="h-10 w-auto object-contain" />
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
