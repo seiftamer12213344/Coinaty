@@ -150,7 +150,7 @@ export async function registerRoutes(
     }
   });
 
-  // Users - search must be BEFORE :id route
+  // Users - static routes BEFORE :id route
   app.get(api.users.search.path, async (req, res) => {
     try {
       const q = (req.query.q as string) || "";
@@ -161,7 +161,15 @@ export async function registerRoutes(
     }
   });
 
-  // Users
+  app.get(api.users.leaderboard.path, async (req, res) => {
+    try {
+      const users = await storage.getLeaderboard();
+      res.status(200).json(users);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get(api.users.getProfile.path, async (req, res) => {
     try {
       const user = await storage.getUser(req.params.id);
@@ -178,15 +186,6 @@ export async function registerRoutes(
       const user = await storage.updateUserProfile(req.user.claims.sub, input);
       if (!user) return res.status(404).json({ message: "User not found" });
       res.status(200).json(user);
-    } catch (err) {
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.get(api.users.leaderboard.path, async (req, res) => {
-    try {
-      const users = await storage.getLeaderboard();
-      res.status(200).json(users);
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
     }
