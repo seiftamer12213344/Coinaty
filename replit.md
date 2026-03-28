@@ -12,6 +12,7 @@ Coinaty is a social network for coin collectors (numismatists). It allows users 
 - Numista integration for looking up coins by name
 - Group chats with invitation system (create groups, invite via DM page, accept/decline)
 - AI-powered coin chatbot (via OpenAI)
+- Email/password authentication (register + login) alongside Replit OIDC
 - Dark/light theme toggle with persistent preference
 
 ---

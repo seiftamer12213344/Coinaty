@@ -80,7 +80,7 @@ export default function CoinDetails() {
             <div className="flex items-center justify-between bg-card p-4 rounded-2xl border border-border/50">
               <div className="flex items-center gap-6">
                 <button 
-                  onClick={() => user ? toggleLike.mutate(coinId) : window.location.href="/api/login"}
+                  onClick={() => user ? toggleLike.mutate(coinId) : window.location.href="/auth"}
                   className="flex items-center gap-2 group"
                 >
                   <div className={`p-2 rounded-full transition-colors ${hasLiked ? 'bg-primary/20' : 'bg-white/5 group-hover:bg-white/10'}`}>
@@ -209,7 +209,7 @@ export default function CoinDetails() {
                   </form>
                 ) : (
                   <div className="text-center py-2">
-                    <button onClick={() => window.location.href="/api/login"} className="text-sm text-primary hover:underline font-medium">
+                    <button onClick={() => window.location.href="/auth"} className="text-sm text-primary hover:underline font-medium">
                       Sign in to scribe notes
                     </button>
                   </div>

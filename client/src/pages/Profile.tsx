@@ -56,7 +56,7 @@ export default function Profile() {
 
   const handleStartDiscussion = () => {
     if (!authUser) {
-      window.location.href = "/api/login";
+      window.location.href = "/auth";
       return;
     }
     setLocation(`/messages?user=${targetId}`);

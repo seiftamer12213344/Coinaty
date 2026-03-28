@@ -86,7 +86,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </button>
           ) : (
             <button 
-              onClick={() => window.location.href = "/api/login"}
+              onClick={() => window.location.href = "/auth"}
               className="flex items-center justify-center gap-2 w-full px-4 py-2 border border-primary/50 text-primary rounded-lg hover:bg-primary/10 transition-colors"
             >
               <LogIn className="w-4 h-4" />
@@ -110,7 +110,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </Link>
             {!isAuthenticated && (
                <button 
-                onClick={() => window.location.href = "/api/login"}
+                onClick={() => window.location.href = "/auth"}
                 className="text-xs font-semibold text-primary"
               >
                 LOGIN

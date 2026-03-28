@@ -145,7 +145,7 @@ export function CoinCard({ coin }: { coin: Coin }) {
               <button 
                 data-testid={`button-like-${coin.id}`}
                 onClick={() => {
-                  if (!user) window.location.href = "/api/login";
+                  if (!user) window.location.href = "/auth";
                   else toggleLike.mutate(coin.id);
                 }}
                 className="group p-1"
@@ -178,7 +178,7 @@ export function CoinCard({ coin }: { coin: Coin }) {
             <button
               data-testid={`button-watchlist-${coin.id}`}
               onClick={() => {
-                if (!user) { window.location.href = "/api/login"; return; }
+                if (!user) { window.location.href = "/auth"; return; }
                 toggleWatchlist.mutate(coin.id);
               }}
               disabled={toggleWatchlist.isPending}

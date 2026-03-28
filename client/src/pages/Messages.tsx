@@ -51,7 +51,7 @@ export default function Messages() {
   }, [messages, groupMsgs]);
 
   if (authLoading) return <Shell><LoadingSpinner /></Shell>;
-  if (!user) { window.location.href = "/api/login"; return null; }
+  if (!user) { window.location.href = "/auth"; return null; }
 
   const activeUserFromConvs = conversations?.find((c: any) => c.id === activeUserId);
   const { data: fetchedActiveUser } = useUserProfile(activeUserId && !activeUserFromConvs ? activeUserId : undefined);

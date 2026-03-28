@@ -311,7 +311,7 @@ export default function AddCoin() {
   };
 
   if (authLoading) return null;
-  if (!user) { window.location.href = "/api/login"; return null; }
+  if (!user) { window.location.href = "/auth"; return null; }
 
   return (
     <Shell>

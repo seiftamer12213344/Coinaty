@@ -14,10 +14,12 @@ import Profile from "./pages/Profile";
 import Leaderboard from "./pages/Leaderboard";
 import Messages from "./pages/Messages";
 import Search from "./pages/Search";
+import Auth from "./pages/Auth";
 
 function Router() {
   return (
     <Switch>
+      <Route path="/auth" component={Auth} />
       <Route path="/" component={Home} />
       <Route path="/add-coin" component={AddCoin} />
       <Route path="/coin/:id" component={CoinDetails} />

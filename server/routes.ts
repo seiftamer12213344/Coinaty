@@ -13,6 +13,14 @@ import { fileURLToPath } from "url";
 import { randomUUID } from "crypto";
 import fs from "fs";
 
+function stripPassword<T extends Record<string, any>>(obj: T): Omit<T, 'password'> {
+  const { password, ...rest } = obj;
+  return rest;
+}
+function stripPasswords<T extends Record<string, any>>(arr: T[]): Omit<T, 'password'>[] {
+  return arr.map(stripPassword);
+}
+
 // Multer — file upload config
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, "..", "public", "uploads");
@@ -101,7 +109,7 @@ export async function registerRoutes(
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(404).json({ message: "Invalid ID" });
       const users = await storage.getUsersWhoLikedCoin(id);
-      res.status(200).json(users);
+      res.status(200).json(stripPasswords(users));
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -155,7 +163,7 @@ export async function registerRoutes(
     try {
       const q = (req.query.q as string) || "";
       const users = await storage.searchUsers(q);
-      res.status(200).json(users);
+      res.status(200).json(stripPasswords(users));
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -164,7 +172,7 @@ export async function registerRoutes(
   app.get(api.users.leaderboard.path, async (req, res) => {
     try {
       const users = await storage.getLeaderboard();
-      res.status(200).json(users);
+      res.status(200).json(stripPasswords(users));
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -174,7 +182,7 @@ export async function registerRoutes(
     try {
       const user = await storage.getUser(req.params.id);
       if (!user) return res.status(404).json({ message: "User not found" });
-      res.status(200).json(user);
+      res.status(200).json(stripPassword(user));
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -185,7 +193,7 @@ export async function registerRoutes(
       const input = api.users.updateProfile.input.parse(req.body);
       const user = await storage.updateUserProfile(req.user.claims.sub, input);
       if (!user) return res.status(404).json({ message: "User not found" });
-      res.status(200).json(user);
+      res.status(200).json(stripPassword(user));
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
     }
