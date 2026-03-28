@@ -204,7 +204,6 @@ export default function AddCoin() {
     photoUrl: "",
     backPhotoUrl: "",
     metalType: "Silver",
-    estimatedValue: "",
     numistaId: "",
   });
 
@@ -271,7 +270,6 @@ export default function AddCoin() {
           : detail.composition?.text?.match(/silver/i) ? "Silver"
           : detail.composition?.text?.match(/bronze|copper/i) ? "Bronze/Copper"
           : "Unknown",
-        estimatedValue: "",
         numistaId: detail.id,
       });
       setMode("selected");
@@ -297,7 +295,6 @@ export default function AddCoin() {
       ...formData,
       photoUrl: finalPhotoUrl,
       backPhotoUrl: formData.backPhotoUrl.trim() || undefined,
-      estimatedValue: formData.estimatedValue ? Number(formData.estimatedValue) : 0,
     }, {
       onSuccess: () => setLocation("/"),
     });
@@ -309,7 +306,7 @@ export default function AddCoin() {
     setResults([]);
     setSelectedMeta(null);
     setSearchError("");
-    setFormData({ title: "", description: "", category: "Ottoman", photoUrl: "", backPhotoUrl: "", metalType: "Silver", estimatedValue: "", numistaId: "" });
+    setFormData({ title: "", description: "", category: "Ottoman", photoUrl: "", backPhotoUrl: "", metalType: "Silver", numistaId: "" });
   };
 
   if (authLoading) return null;
@@ -533,18 +530,6 @@ export default function AddCoin() {
                     placeholder="e.g. 90% Gold, Copper"
                     className={FIELD_CLASS}
                   />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-foreground uppercase tracking-wider">
-                    Estimated Value ($)
-                  </label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                    <input type="number" name="estimatedValue" value={formData.estimatedValue} onChange={handleChange}
-                      placeholder="0"
-                      className={`${FIELD_CLASS} pl-8`}
-                    />
-                  </div>
                 </div>
               </div>
 

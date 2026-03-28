@@ -41,11 +41,7 @@ export function useCreateCoin() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: InsertCoin) => {
-      // Coerce estimatedValue to number if it's a string from a form
-      const validated = api.coins.create.input.parse({
-        ...data,
-        estimatedValue: data.estimatedValue ? Number(data.estimatedValue) : 0,
-      });
+      const validated = api.coins.create.input.parse(data);
       
       const res = await fetch(api.coins.create.path, {
         method: api.coins.create.method,

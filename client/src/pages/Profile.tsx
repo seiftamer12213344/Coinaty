@@ -72,8 +72,6 @@ export default function Profile() {
     </Shell>
   );
 
-  const totalValue = userCoins?.reduce((sum, coin) => sum + (coin.estimatedValue || 0), 0) || 0;
-
   return (
     <Shell>
       <div className="p-0 md:p-8 space-y-6">
@@ -131,16 +129,12 @@ export default function Profile() {
             </div>
 
             {/* Stats Row */}
-            <div className="grid grid-cols-3 gap-4 border-y border-border/50 py-6 mb-6">
+            <div className="grid grid-cols-2 gap-4 border-y border-border/50 py-6 mb-6">
                <div className="text-center">
                   <p className="text-2xl font-serif font-bold text-foreground">{userCoins?.length || 0}</p>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground mt-1">Artifacts</p>
                </div>
-               <div className="text-center border-x border-border/50">
-                  <p className="text-2xl font-serif font-bold text-primary drop-shadow-[0_0_5px_rgba(212,175,55,0.3)]">${totalValue.toLocaleString()}</p>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mt-1">Vault Value</p>
-               </div>
-               <div className="text-center">
+               <div className="text-center border-l border-border/50">
                   <p className="text-2xl font-serif font-bold text-foreground">{profile.points || 0}</p>
                   <p className="text-xs uppercase tracking-wider text-muted-foreground mt-1">Prestige Pts</p>
                </div>

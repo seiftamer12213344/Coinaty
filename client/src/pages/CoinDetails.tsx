@@ -124,15 +124,9 @@ export default function CoinDetails() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-6 border-t border-border/30">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Metal</p>
-                  <p className="font-medium text-foreground">{coin.metalType || "Unknown"}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Estimated Value</p>
-                  <p className="font-medium text-primary font-serif">${coin.estimatedValue?.toLocaleString() || "0"}</p>
-                </div>
+              <div className="pt-6 border-t border-border/30">
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Metal</p>
+                <p className="font-medium text-foreground">{coin.metalType || "Unknown"}</p>
               </div>
 
               <div className="pt-6 border-t border-border/30">
