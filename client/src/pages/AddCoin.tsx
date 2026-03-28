@@ -22,6 +22,7 @@ interface NumistaDetail extends NumistaResult {
   weight_g?: number;
   diameter_mm?: number;
   ruler?: { name: string };
+  reverse?: { thumbnail?: string; picture?: string };
 }
 
 type Mode = "search" | "selected" | "manual";
@@ -265,6 +266,7 @@ export default function AddCoin() {
         description: parts.join(" "),
         category,
         photoUrl: detail.obverse?.thumbnail || "",
+        backPhotoUrl: detail.reverse?.thumbnail || "",
         metalType: detail.composition?.text?.match(/gold/i) ? "Gold"
           : detail.composition?.text?.match(/silver/i) ? "Silver"
           : detail.composition?.text?.match(/bronze|copper/i) ? "Bronze/Copper"

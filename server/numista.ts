@@ -135,11 +135,19 @@ export async function searchNumista(query: string): Promise<NumistaSearchResult[
       String(r.min_year || "").includes(q)
     );
   }
-  const url = `${NUMISTA_BASE}/types?q=${encodeURIComponent(query)}&lang=en&count=12`;
+  const url = `${NUMISTA_BASE}/types?q=${encodeURIComponent(query)}&lang=en&count=50`;
   const res = await fetch(url, { headers: { "Numista-Api-Key": NUMISTA_API_KEY } });
   if (!res.ok) throw new Error(`Numista API error: ${res.status}`);
-  const data = await res.json() as { types?: NumistaSearchResult[] };
-  return data.types || [];
+  const data = await res.json() as { types?: any[] };
+  return (data.types || []).map((t: any) => ({
+    id: String(t.id),
+    title: t.title,
+    issuer: t.issuer,
+    min_year: t.min_year,
+    max_year: t.max_year,
+    obverse: { thumbnail: t.obverse_thumbnail, picture: t.obverse_picture },
+    reverse: { thumbnail: t.reverse_thumbnail, picture: t.reverse_picture },
+  }));
 }
 
 export async function getNumistaCoin(id: string): Promise<NumistaCoinDetail | null> {
@@ -150,5 +158,19 @@ export async function getNumistaCoin(id: string): Promise<NumistaCoinDetail | nu
   const res = await fetch(url, { headers: { "Numista-Api-Key": NUMISTA_API_KEY } });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Numista API error: ${res.status}`);
-  return res.json();
+  const t = await res.json() as any;
+  return {
+    id: String(t.id),
+    title: t.title,
+    issuer: t.issuer,
+    min_year: t.min_year,
+    max_year: t.max_year,
+    obverse: { thumbnail: t.obverse?.thumbnail || t.obverse_thumbnail, picture: t.obverse?.picture || t.obverse_picture },
+    reverse: { thumbnail: t.reverse?.thumbnail || t.reverse_thumbnail, picture: t.reverse?.picture || t.reverse_picture },
+    composition: t.composition,
+    weight_g: t.weight,
+    diameter_mm: t.size,
+    ruler: t.ruler,
+    category: t.category,
+  };
 }
