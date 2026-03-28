@@ -226,6 +226,124 @@ export async function registerRoutes(
     }
   });
 
+  // Groups — static routes before :id routes
+  app.get(api.groups.pendingInvitations.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const invitations = await storage.getPendingInvitations(req.user.claims.sub);
+      res.status(200).json(invitations);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post(api.groups.respondInvitation.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const { accept } = api.groups.respondInvitation.input.parse(req.body);
+      await storage.respondToInvitation(Number(req.params.id), req.user.claims.sub, accept);
+      res.status(200).json({ message: accept ? "Invitation accepted" : "Invitation declined" });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get(api.groups.list.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const userGroups = await storage.getGroupsForUser(req.user.claims.sub);
+      res.status(200).json(userGroups);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post(api.groups.create.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const { name } = api.groups.create.input.parse(req.body);
+      const group = await storage.createGroup(name, req.user.claims.sub);
+      res.status(201).json(group);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get(api.groups.get.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const group = await storage.getGroupById(Number(req.params.id));
+      if (!group) return res.status(404).json({ message: "Group not found" });
+      const isMember = await storage.isGroupMember(group.id, req.user.claims.sub);
+      if (!isMember) return res.status(403).json({ message: "Not a member of this group" });
+      res.status(200).json(group);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get(api.groups.members.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const groupId = Number(req.params.id);
+      const isMember = await storage.isGroupMember(groupId, req.user.claims.sub);
+      if (!isMember) return res.status(403).json({ message: "Not a member" });
+      const members = await storage.getGroupMembers(groupId);
+      res.status(200).json(members);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get(api.groups.messages.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const groupId = Number(req.params.id);
+      const isMember = await storage.isGroupMember(groupId, req.user.claims.sub);
+      if (!isMember) return res.status(403).json({ message: "Not a member" });
+      const msgs = await storage.getGroupMessages(groupId);
+      res.status(200).json(msgs);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post(api.groups.sendMessage.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const groupId = Number(req.params.id);
+      const isMember = await storage.isGroupMember(groupId, req.user.claims.sub);
+      if (!isMember) return res.status(403).json({ message: "Not a member" });
+      const { content } = api.groups.sendMessage.input.parse(req.body);
+      const msg = await storage.sendGroupMessage(groupId, req.user.claims.sub, content);
+      res.status(201).json(msg);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post(api.groups.invite.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const groupId = Number(req.params.id);
+      const isMember = await storage.isGroupMember(groupId, req.user.claims.sub);
+      if (!isMember) return res.status(403).json({ message: "Not a member" });
+      const { userId } = api.groups.invite.input.parse(req.body);
+      if (userId === req.user.claims.sub) return res.status(400).json({ message: "Cannot invite yourself" });
+      const alreadyMember = await storage.isGroupMember(groupId, userId);
+      if (alreadyMember) return res.status(400).json({ message: "User is already a member" });
+      const invitation = await storage.createGroupInvitation(groupId, req.user.claims.sub, userId);
+      res.status(201).json(invitation);
+    } catch (err: any) {
+      if (err.message === "Invitation already pending") return res.status(400).json({ message: err.message });
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post(api.groups.leave.path, isAuthenticated, async (req: any, res) => {
+    try {
+      const groupId = Number(req.params.id);
+      await storage.removeGroupMember(groupId, req.user.claims.sub);
+      res.status(200).json({ message: "Left the group" });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Seed data
   app.post("/api/seed", async (req, res) => {
     try {

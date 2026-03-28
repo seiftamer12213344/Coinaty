@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { insertCoinSchema, coins, users, comments, messages } from "./schema";
+import { insertCoinSchema, coins, users, comments, messages, groups, groupMessages, groupInvitations } from "./schema";
 
 export const errorSchemas = {
   validation: z.object({
@@ -162,7 +162,92 @@ export const api = {
         401: z.object({ message: z.string() })
       }
     }
-  }
+  },
+  groups: {
+    create: {
+      method: "POST" as const,
+      path: "/api/groups" as const,
+      input: z.object({ name: z.string().min(1).max(100) }),
+      responses: {
+        201: z.custom<typeof groups.$inferSelect>(),
+        401: z.object({ message: z.string() }),
+      },
+    },
+    list: {
+      method: "GET" as const,
+      path: "/api/groups" as const,
+      responses: {
+        200: z.array(z.custom<typeof groups.$inferSelect & { memberCount: number }>()),
+        401: z.object({ message: z.string() }),
+      },
+    },
+    get: {
+      method: "GET" as const,
+      path: "/api/groups/:id" as const,
+      responses: {
+        200: z.custom<typeof groups.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    members: {
+      method: "GET" as const,
+      path: "/api/groups/:id/members" as const,
+      responses: {
+        200: z.array(z.any()),
+      },
+    },
+    messages: {
+      method: "GET" as const,
+      path: "/api/groups/:id/messages" as const,
+      responses: {
+        200: z.array(z.any()),
+      },
+    },
+    sendMessage: {
+      method: "POST" as const,
+      path: "/api/groups/:id/messages" as const,
+      input: z.object({ content: z.string().min(1) }),
+      responses: {
+        201: z.custom<typeof groupMessages.$inferSelect>(),
+        401: z.object({ message: z.string() }),
+      },
+    },
+    invite: {
+      method: "POST" as const,
+      path: "/api/groups/:id/invite" as const,
+      input: z.object({ userId: z.string() }),
+      responses: {
+        201: z.custom<typeof groupInvitations.$inferSelect>(),
+        400: z.object({ message: z.string() }),
+        401: z.object({ message: z.string() }),
+      },
+    },
+    pendingInvitations: {
+      method: "GET" as const,
+      path: "/api/groups/invitations" as const,
+      responses: {
+        200: z.array(z.any()),
+        401: z.object({ message: z.string() }),
+      },
+    },
+    respondInvitation: {
+      method: "POST" as const,
+      path: "/api/groups/invitations/:id/respond" as const,
+      input: z.object({ accept: z.boolean() }),
+      responses: {
+        200: z.object({ message: z.string() }),
+        401: z.object({ message: z.string() }),
+      },
+    },
+    leave: {
+      method: "POST" as const,
+      path: "/api/groups/:id/leave" as const,
+      responses: {
+        200: z.object({ message: z.string() }),
+        401: z.object({ message: z.string() }),
+      },
+    },
+  },
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {

@@ -10,7 +10,7 @@ Coinaty is a social network for coin collectors (numismatists). It allows users 
 - User profiles with rank/points gamification system (Novice → Numismatist → Master)
 - Direct messaging between users
 - Numista integration for looking up coins by name
-- Mocked gold/silver price ticker in the sidebar
+- Group chats with invitation system (create groups, invite via DM page, accept/decline)
 - AI-powered coin chatbot (via OpenAI)
 - Dark/light theme toggle with persistent preference
 
@@ -73,6 +73,10 @@ Preferred communication style: Simple, everyday language.
   - `coin_likes` — many-to-many: user ↔ coin
   - `comments` — per-coin comments with userId
   - `messages` — direct messages between two users (senderId, receiverId)
+  - `groups` — group chat rooms (name, createdBy)
+  - `group_members` — group membership (groupId, userId, role: admin/member)
+  - `group_messages` — messages within a group (groupId, senderId, content)
+  - `group_invitations` — pending/accepted/declined invitations (groupId, inviterId, inviteeId, status)
   - `conversations` / `messages` (chat models) — used by the AI chatbot integration
 - **Migrations:** `drizzle-kit push` (`db:push` script); migration files in `./migrations/`
 - **Connection:** `DATABASE_URL` environment variable required
@@ -86,10 +90,11 @@ Preferred communication style: Simple, everyday language.
   - 500+ pts → Master of Coinaty
 - Points and ranks are displayed on profiles and the leaderboard
 
-### Messaging
+### Messaging & Groups
 
 - Direct messages are stored in the `messages` table (senderId / receiverId columns)
 - The client polls `/api/messages/:userId` every 5 seconds for new messages (simple MVP polling, not WebSocket)
+- Group chats: users create groups, invite others (invitation sent via group UI on the Messages page), invitees accept/decline. Group messages poll every 5s. The Messages page has DM/Groups tabs.
 
 ### Replit Integration Modules
 

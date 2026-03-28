@@ -99,6 +99,62 @@ export const watchlistRelations = relations(watchlistItems, ({ one }) => ({
   coin: one(coins, { fields: [watchlistItems.coinId], references: [coins.id] }),
 }));
 
+// Groups
+export const groups = pgTable("groups", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  createdBy: varchar("created_by").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const groupMembers = pgTable("group_members", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  role: text("role").notNull().default("member"),
+  joinedAt: timestamp("joined_at").defaultNow(),
+});
+
+export const groupMessages = pgTable("group_messages", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull(),
+  senderId: varchar("sender_id").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const groupInvitations = pgTable("group_invitations", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull(),
+  inviterId: varchar("inviter_id").notNull(),
+  inviteeId: varchar("invitee_id").notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const groupsRelations = relations(groups, ({ one, many }) => ({
+  creator: one(users, { fields: [groups.createdBy], references: [users.id] }),
+  members: many(groupMembers),
+  messages: many(groupMessages),
+  invitations: many(groupInvitations),
+}));
+
+export const groupMembersRelations = relations(groupMembers, ({ one }) => ({
+  group: one(groups, { fields: [groupMembers.groupId], references: [groups.id] }),
+  user: one(users, { fields: [groupMembers.userId], references: [users.id] }),
+}));
+
+export const groupMessagesRelations = relations(groupMessages, ({ one }) => ({
+  group: one(groups, { fields: [groupMessages.groupId], references: [groups.id] }),
+  sender: one(users, { fields: [groupMessages.senderId], references: [users.id] }),
+}));
+
+export const groupInvitationsRelations = relations(groupInvitations, ({ one }) => ({
+  group: one(groups, { fields: [groupInvitations.groupId], references: [groups.id] }),
+  inviter: one(users, { fields: [groupInvitations.inviterId], references: [users.id] }),
+  invitee: one(users, { fields: [groupInvitations.inviteeId], references: [users.id] }),
+}));
+
 // Zod Schemas
 export const insertCoinSchema = createInsertSchema(coins).omit({ 
   id: true, createdAt: true, userId: true 
@@ -110,6 +166,13 @@ export const insertMessageSchema = createInsertSchema(messages).omit({
   id: true, createdAt: true, senderId: true 
 });
 
+export const insertGroupSchema = createInsertSchema(groups).omit({
+  id: true, createdAt: true, createdBy: true,
+});
+export const insertGroupMessageSchema = createInsertSchema(groupMessages).omit({
+  id: true, createdAt: true, senderId: true, groupId: true,
+});
+
 // Exports
 export type User = typeof users.$inferSelect;
 export type Coin = typeof coins.$inferSelect;
@@ -117,5 +180,9 @@ export type CoinLike = typeof coinLikes.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type WatchlistItem = typeof watchlistItems.$inferSelect;
+export type Group = typeof groups.$inferSelect;
+export type GroupMember = typeof groupMembers.$inferSelect;
+export type GroupMessage = typeof groupMessages.$inferSelect;
+export type GroupInvitation = typeof groupInvitations.$inferSelect;
 
 export type InsertCoin = z.infer<typeof insertCoinSchema>;
