@@ -9,9 +9,19 @@ import { fileURLToPath } from "url";
 const app = express();
 const httpServer = createServer(app);
 
+// Pre-startup validation logging
+const requiredEnvVars = ['SESSION_SECRET', 'DATABASE_URL'] as const;
+for (const envVar of requiredEnvVars) {
+  if (process.env[envVar]) {
+    console.log(`[startup] ${envVar} is set`);
+  } else {
+    console.error(`[startup] ${envVar} is MISSING`);
+  }
+}
+
 // Secure Session Secret Check
 const sessionSecret = process.env.SESSION_SECRET || (() => {
-  console.error('SESSION_SECRET is not set');
+  console.error('SESSION_SECRET is not set — exiting');
   process.exit(1);
 })();
 
@@ -95,9 +105,12 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  const PORT = Number(process.env.PORT) || 3000;
+  const PORT = Number(process.env.PORT) || 5000;
 
   httpServer.listen(PORT, "0.0.0.0", () => {
     log(`Server is active on port ${PORT}`);
   });
-})();
+})().catch((err) => {
+  console.error("[startup] Fatal error during server initialization:", err);
+  process.exit(1);
+});
