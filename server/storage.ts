@@ -1,4 +1,4 @@
-import { coins, coinLikes, comments, messages, users as usersTable, watchlistItems, groups, groupMembers, groupMessages, groupInvitations, vaultFolders, vaultFolderCoins, type User, type Coin, type CoinLike, type Comment, type Message, type WatchlistItem, type Group, type GroupMember, type GroupMessage, type GroupInvitation, type InsertCoin, type VaultFolder } from "@shared/schema";
+import { coins, coinLikes, comments, messages, users as usersTable, watchlistItems, groups, groupMembers, groupMessages, groupInvitations, type User, type Coin, type CoinLike, type Comment, type Message, type WatchlistItem, type Group, type GroupMember, type GroupMessage, type GroupInvitation, type InsertCoin } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, inArray, sql, ilike } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth";
@@ -39,16 +39,6 @@ export interface IStorage extends IAuthStorage {
   getWatchlist(userId: string): Promise<Coin[]>;
   isInWatchlist(userId: string, coinId: number): Promise<boolean>;
   toggleWatchlist(userId: string, coinId: number): Promise<{ added: boolean }>;
-
-  // Vault Folders
-  getFolders(userId: string): Promise<(VaultFolder & { coinCount: number })[]>;
-  createFolder(userId: string, name: string): Promise<VaultFolder>;
-  renameFolder(id: number, userId: string, name: string): Promise<VaultFolder | undefined>;
-  deleteFolder(id: number, userId: string): Promise<boolean>;
-  getFolderCoins(folderId: number): Promise<Coin[]>;
-  addCoinToFolder(folderId: number, coinId: number, userId: string): Promise<boolean>;
-  removeCoinFromFolder(folderId: number, coinId: number, userId: string): Promise<boolean>;
-  getCoinFolders(coinId: number, userId: string): Promise<VaultFolder[]>;
 
   // Groups
   createGroup(name: string, createdBy: string): Promise<Group>;
@@ -347,76 +337,6 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
   }
 
-  // Vault Folders
-  async getFolders(userId: string): Promise<(VaultFolder & { coinCount: number })[]> {
-    const folders = await db.select().from(vaultFolders)
-      .where(eq(vaultFolders.userId, userId))
-      .orderBy(vaultFolders.createdAt);
-    const result = await Promise.all(folders.map(async (f) => {
-      const [{ count }] = await db.select({ count: sql<number>`count(*)::int` })
-        .from(vaultFolderCoins).where(eq(vaultFolderCoins.folderId, f.id));
-      return { ...f, coinCount: count };
-    }));
-    return result;
-  }
-
-  async createFolder(userId: string, name: string): Promise<VaultFolder> {
-    const [folder] = await db.insert(vaultFolders).values({ userId, name }).returning();
-    return folder;
-  }
-
-  async renameFolder(id: number, userId: string, name: string): Promise<VaultFolder | undefined> {
-    const [folder] = await db.update(vaultFolders)
-      .set({ name })
-      .where(and(eq(vaultFolders.id, id), eq(vaultFolders.userId, userId)))
-      .returning();
-    return folder;
-  }
-
-  async deleteFolder(id: number, userId: string): Promise<boolean> {
-    await db.delete(vaultFolderCoins).where(eq(vaultFolderCoins.folderId, id));
-    const result = await db.delete(vaultFolders)
-      .where(and(eq(vaultFolders.id, id), eq(vaultFolders.userId, userId)))
-      .returning();
-    return result.length > 0;
-  }
-
-  async getFolderCoins(folderId: number): Promise<Coin[]> {
-    const rows = await db.select({ coin: coins })
-      .from(vaultFolderCoins)
-      .innerJoin(coins, eq(vaultFolderCoins.coinId, coins.id))
-      .where(eq(vaultFolderCoins.folderId, folderId))
-      .orderBy(desc(vaultFolderCoins.addedAt));
-    return rows.map(r => r.coin);
-  }
-
-  async addCoinToFolder(folderId: number, coinId: number, userId: string): Promise<boolean> {
-    const [folder] = await db.select().from(vaultFolders)
-      .where(and(eq(vaultFolders.id, folderId), eq(vaultFolders.userId, userId)));
-    if (!folder) return false;
-    const [existing] = await db.select().from(vaultFolderCoins)
-      .where(and(eq(vaultFolderCoins.folderId, folderId), eq(vaultFolderCoins.coinId, coinId)));
-    if (existing) return true;
-    await db.insert(vaultFolderCoins).values({ folderId, coinId });
-    return true;
-  }
-
-  async removeCoinFromFolder(folderId: number, coinId: number, userId: string): Promise<boolean> {
-    const [folder] = await db.select().from(vaultFolders)
-      .where(and(eq(vaultFolders.id, folderId), eq(vaultFolders.userId, userId)));
-    if (!folder) return false;
-    await db.delete(vaultFolderCoins)
-      .where(and(eq(vaultFolderCoins.folderId, folderId), eq(vaultFolderCoins.coinId, coinId)));
-    return true;
-  }
-
-  async getCoinFolders(coinId: number, userId: string): Promise<VaultFolder[]> {
-    const rows = await db.select({ folder: vaultFolders })
-      .from(vaultFolderCoins)
-      .innerJoin(vaultFolders, eq(vaultFolderCoins.folderId, vaultFolders.id))
-      .where(and(eq(vaultFolderCoins.coinId, coinId), eq(vaultFolders.userId, userId)));
-    return rows.map(r => r.folder);
-  }
 }
 
 export const storage = new DatabaseStorage();
