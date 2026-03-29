@@ -5,9 +5,32 @@ import { useCreateCoin } from "@/hooks/use-coins";
 import { Shell } from "@/components/layout/Shell";
 import {
   Search, Upload, ChevronRight, X, Loader2, Sparkles,
-  PencilLine, ExternalLink, CheckCircle2, ArrowLeft, ImagePlus, Link as LinkIcon
+  PencilLine, ExternalLink, CheckCircle2, ArrowLeft, ImagePlus, Link as LinkIcon,
+  Map, Globe, Calendar, Coins
 } from "lucide-react";
+import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
+import { getHistoricalEntity, getEntityColor } from "@/data/historicalEntities";
 
+const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+
+const ENTITY_COLORS: Record<string, { fill: string; hover: string }> = {
+  ottoman:   { fill: "#3d2d5e", hover: "#5a4080" },
+  russian:   { fill: "#5c2233", hover: "#7a2e47" },
+  british:   { fill: "#3b1f1f", hover: "#5c2f2f" },
+  french:    { fill: "#1a3060", hover: "#254590" },
+  spanish:   { fill: "#5c2820", hover: "#7a3828" },
+  austrian:  { fill: "#1f3a50", hover: "#2d5570" },
+  german:    { fill: "#2d3844", hover: "#405260" },
+  mughal:    { fill: "#5a3f10", hover: "#7a5520" },
+  chinese:   { fill: "#5a1a1a", hover: "#7a2a2a" },
+  japanese:  { fill: "#5a1a2a", hover: "#7a2a3a" },
+  portuguese:{ fill: "#1f4a2a", hover: "#2d6a3a" },
+  persian:   { fill: "#3a1f5a", hover: "#542d80" },
+  historical:{ fill: "#2d3a4a", hover: "#405260" },
+  modern:    { fill: "#1a2a3a", hover: "#253a4a" },
+};
+
+// ── Interfaces ──────────────────────────────────────────────────────────────
 interface NumistaResult {
   id: string;
   title: string;
@@ -25,11 +48,11 @@ interface NumistaDetail extends NumistaResult {
   reverse?: { thumbnail?: string; picture?: string };
 }
 
-type Mode = "search" | "selected" | "manual";
+type Mode = "discover" | "search" | "selected" | "manual";
 
 const FIELD_CLASS = "w-full bg-background border border-border rounded-xl py-3 px-4 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-colors";
 
-// ── Reusable image upload field ────────────────────────────────────────────
+// ── ImageUploadField ─────────────────────────────────────────────────────────
 interface ImageUploadFieldProps {
   label: string;
   badge: string;
@@ -78,17 +101,12 @@ function ImageUploadField({ label, badge, badgeVariant, hint, value, onChange, a
 
   return (
     <div className="space-y-2">
-      {/* Label row */}
       <div className="flex items-center gap-2">
         <span className={`text-xs font-semibold uppercase tracking-widest rounded-full px-2 py-0.5 border ${
           isPrimary ? "text-primary bg-primary/10 border-primary/20" : "text-muted-foreground bg-muted border-border"
-        }`}>
-          {badge}
-        </span>
+        }`}>{badge}</span>
         <span className="text-xs text-muted-foreground">{hint}</span>
       </div>
-
-      {/* Drop zone / preview */}
       <div
         data-testid={`${testId}-dropzone`}
         onDragOver={e => { e.preventDefault(); setDragOver(true); }}
@@ -112,17 +130,10 @@ function ImageUploadField({ label, badge, badgeVariant, hint, value, onChange, a
           </div>
         ) : value ? (
           <>
-            <img
-              src={value}
-              alt={label}
-              className="w-full h-full object-contain p-2"
-              onError={e => ((e.target as HTMLImageElement).style.opacity = "0.3")}
-            />
-            <button
-              type="button"
-              onClick={e => { e.stopPropagation(); onChange(""); }}
-              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 hover:bg-red-600 text-white flex items-center justify-center transition-colors"
-            >
+            <img src={value} alt={label} className="w-full h-full object-contain p-2"
+              onError={e => ((e.target as HTMLImageElement).style.opacity = "0.3")} />
+            <button type="button" onClick={e => { e.stopPropagation(); onChange(""); }}
+              className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/70 hover:bg-red-600 text-white flex items-center justify-center transition-colors">
               <X className="w-3.5 h-3.5" />
             </button>
           </>
@@ -133,49 +144,26 @@ function ImageUploadField({ label, badge, badgeVariant, hint, value, onChange, a
           </div>
         )}
       </div>
-
-      {/* Hidden file input */}
-      <input
-        ref={fileRef}
-        data-testid={testId}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}
-      />
-
-      {/* Error */}
+      <input ref={fileRef} data-testid={testId} type="file" accept="image/*" className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }} />
       {uploadError && <p className="text-xs text-red-500">{uploadError}</p>}
-
-      {/* Auto-filled badge */}
       {autoFilled && value && !uploadError && (
         <p className="text-xs text-primary flex items-center gap-1">
           <CheckCircle2 className="w-3 h-3" /> Auto-filled from Numista
         </p>
       )}
-
-      {/* URL toggle */}
-      <button
-        type="button"
-        onClick={() => setShowUrlInput(v => !v)}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-      >
+      <button type="button" onClick={() => setShowUrlInput(v => !v)}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
         <LinkIcon className="w-3 h-3" />
         {showUrlInput ? "Hide URL input" : "Or paste a URL instead"}
       </button>
       {showUrlInput && (
-        <input
-          type="url"
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          placeholder="https://example.com/coin.jpg"
-          className={FIELD_CLASS + " text-sm"}
-        />
+        <input type="url" value={value} onChange={e => onChange(e.target.value)}
+          placeholder="https://example.com/coin.jpg" className={FIELD_CLASS + " text-sm"} />
       )}
     </div>
   );
 }
-// ──────────────────────────────────────────────────────────────────────────
 
 function yearLabel(min?: number, max?: number) {
   if (!min && !max) return "";
@@ -183,12 +171,24 @@ function yearLabel(min?: number, max?: number) {
   return `${min} – ${max}`;
 }
 
+// ── Map Color helper ──────────────────────────────────────────────────────────
+function getMapFill(countryName: string, year: number, isSelected: boolean, isHovered: boolean) {
+  if (isSelected) return "#D4AF37";
+  if (isHovered) {
+    const colorKey = getEntityColor(countryName, year);
+    return ENTITY_COLORS[colorKey]?.hover ?? "#405260";
+  }
+  const colorKey = getEntityColor(countryName, year);
+  return ENTITY_COLORS[colorKey]?.fill ?? "#1a2a3a";
+}
+
+// ── Main Component ────────────────────────────────────────────────────────────
 export default function AddCoin() {
   const [, setLocation] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
   const createCoin = useCreateCoin();
 
-  const [mode, setMode] = useState<Mode>("search");
+  const [mode, setMode] = useState<Mode>("discover");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<NumistaResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -196,6 +196,17 @@ export default function AddCoin() {
   const [selectedMeta, setSelectedMeta] = useState<NumistaDetail | null>(null);
   const [searchError, setSearchError] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Discover mode state
+  const [selectedYear, setSelectedYear] = useState(1850);
+  const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
+  const [hoveredEntity, setHoveredEntity] = useState<string | null>(null);
+  const [selectedCountryKey, setSelectedCountryKey] = useState<string | null>(null);
+  const [mapResults, setMapResults] = useState<NumistaResult[]>([]);
+  const [mapSearching, setMapSearching] = useState(false);
+  const [mapQuery, setMapQuery] = useState("");
+  const [mapError, setMapError] = useState("");
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
   const [formData, setFormData] = useState({
     title: "",
@@ -207,13 +218,10 @@ export default function AddCoin() {
     numistaId: "",
   });
 
-  // Debounced search
+  // ── Debounced text search (used in search mode) ─────────────────────────────
   useEffect(() => {
-    if (query.trim().length < 2) {
-      setResults([]);
-      setSearchError("");
-      return;
-    }
+    if (mode !== "search") return;
+    if (query.trim().length < 2) { setResults([]); setSearchError(""); return; }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setIsSearching(true);
@@ -232,17 +240,52 @@ export default function AddCoin() {
       }
     }, 400);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query]);
+  }, [query, mode]);
 
+  // ── Map click handler ───────────────────────────────────────────────────────
+  const handleMapClick = useCallback(async (geo: any) => {
+    const countryName: string = geo.properties.name;
+    const entity = getHistoricalEntity(countryName, selectedYear);
+    const q = `${entity} ${selectedYear}`;
+
+    setSelectedCountryKey(geo.rsmKey);
+    setMapQuery(`Coins of "${entity}" minted around ${selectedYear}`);
+    setMapResults([]);
+    setMapError("");
+    setMapSearching(true);
+
+    try {
+      const res = await fetch(`/api/numista/search?q=${encodeURIComponent(entity)}`, { credentials: "include" });
+      if (!res.ok) throw new Error();
+      const data: NumistaResult[] = await res.json();
+
+      // Filter to coins whose year range overlaps the selected year (±30 years tolerance)
+      const filtered = data.filter(c => {
+        if (!c.min_year && !c.max_year) return true;
+        const lo = c.min_year ?? c.max_year!;
+        const hi = c.max_year ?? c.min_year!;
+        return lo <= selectedYear + 30 && hi >= selectedYear - 30;
+      });
+
+      setMapResults(filtered.length > 0 ? filtered : data.slice(0, 8));
+      if (filtered.length === 0 && data.length === 0) setMapError(`No coins found for "${entity}". Try a different territory or year.`);
+    } catch {
+      setMapError("Search unavailable. Check your connection.");
+    } finally {
+      setMapSearching(false);
+    }
+  }, [selectedYear]);
+
+  // ── Select coin from any result list ───────────────────────────────────────
   const handleSelectCoin = async (coin: NumistaResult) => {
     setIsFetchingDetail(true);
     setResults([]);
+    setMapResults([]);
     try {
       const res = await fetch(`/api/numista/types/${coin.id}`, { credentials: "include" });
       const detail: NumistaDetail = res.ok ? await res.json() : coin;
       setSelectedMeta(detail);
 
-      // Infer category from issuer/year
       let category = "Modern";
       const issuer = detail.issuer?.name?.toLowerCase() || "";
       const year = detail.min_year || 0;
@@ -251,7 +294,6 @@ export default function AddCoin() {
       else if (issuer.includes("ottoman") || (year >= 1300 && year < 1800)) category = "Ottoman";
       else if (issuer.includes("egypt") && year >= 1922 && year < 1953) category = "Kingdom of Egypt";
 
-      // Build a rich description from metadata
       const parts: string[] = [];
       if (detail.issuer?.name) parts.push(`Issued by: ${detail.issuer.name}.`);
       if (detail.ruler?.name) parts.push(`Ruler: ${detail.ruler.name}.`);
@@ -274,7 +316,6 @@ export default function AddCoin() {
       });
       setMode("selected");
     } catch {
-      // Still go to form with whatever we have
       setFormData(prev => ({ ...prev, title: coin.title, numistaId: coin.id }));
       setMode("selected");
     } finally {
@@ -300,27 +341,361 @@ export default function AddCoin() {
     });
   };
 
-  const resetToSearch = () => {
-    setMode("search");
+  const resetToDiscover = () => {
+    setMode("discover");
     setQuery("");
     setResults([]);
     setSelectedMeta(null);
     setSearchError("");
+    setMapResults([]);
+    setMapQuery("");
+    setMapError("");
+    setSelectedCountryKey(null);
     setFormData({ title: "", description: "", category: "Ottoman", photoUrl: "", backPhotoUrl: "", metalType: "Silver", numistaId: "" });
   };
 
   if (authLoading) return null;
   if (!user) { window.location.href = "/auth"; return null; }
 
+  // ── Era label ───────────────────────────────────────────────────────────────
+  const ERA_MARKERS = [
+    { year: 1700, label: "1700" },
+    { year: 1800, label: "1800" },
+    { year: 1900, label: "1900" },
+    { year: 1950, label: "1950" },
+    { year: 2000, label: "2000" },
+    { year: 2026, label: "2026" },
+  ];
+
+  const getEraName = (y: number) => {
+    if (y < 1750) return "Early Modern";
+    if (y < 1800) return "Age of Revolutions";
+    if (y < 1850) return "Napoleonic Era";
+    if (y < 1900) return "Industrial Age";
+    if (y < 1920) return "Belle Époque / WWI";
+    if (y < 1945) return "Interwar / WWII";
+    if (y < 1991) return "Cold War Era";
+    return "Modern Era";
+  };
+
   return (
     <Shell>
-      <div className="p-4 md:p-8 max-w-3xl mx-auto">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-serif font-bold text-primary mb-2">Catalog a New Artifact</h1>
-          <p className="text-muted-foreground">Add a piece to the Royal Museum's public gallery.</p>
+      <div className="p-4 md:p-6 max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="mb-6 text-center">
+          <h1 className="text-3xl font-serif font-bold text-primary mb-1">Catalog a New Artifact</h1>
+          <p className="text-muted-foreground text-sm">Explore history on the map, or search the global database directly.</p>
         </div>
 
-        {/* ── SEARCH MODE ──────────────────────────────────────── */}
+        {/* Mode Tabs (discover / search) — only shown in top-level modes */}
+        {(mode === "discover" || mode === "search") && (
+          <div className="flex gap-2 mb-6 bg-card border border-border/50 p-1.5 rounded-2xl w-fit mx-auto shadow">
+            <button
+              data-testid="tab-discover"
+              onClick={() => setMode("discover")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                mode === "discover"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              }`}
+            >
+              <Globe className="w-4 h-4" />
+              Discover by Map
+            </button>
+            <button
+              data-testid="tab-search"
+              onClick={() => setMode("search")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                mode === "search"
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              }`}
+            >
+              <Search className="w-4 h-4" />
+              Search Database
+            </button>
+          </div>
+        )}
+
+        {/* ══ DISCOVER MODE ══════════════════════════════════════════════════════ */}
+        {mode === "discover" && (
+          <div className="space-y-4">
+
+            {/* Timeline Slider Card */}
+            <div className="bg-card border border-border/50 rounded-3xl p-5 md:p-6 shadow-xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <h2 className="font-serif font-semibold text-foreground leading-tight">Timeline</h2>
+                  <p className="text-xs text-muted-foreground">Drag to travel through history</p>
+                </div>
+                <div className="ml-auto text-right">
+                  <span className="text-4xl font-serif font-bold text-primary tabular-nums">{selectedYear}</span>
+                  <p className="text-xs text-muted-foreground">{getEraName(selectedYear)}</p>
+                </div>
+              </div>
+
+              {/* Custom slider */}
+              <div className="relative mt-2">
+                <input
+                  data-testid="input-year-slider"
+                  type="range"
+                  min={1700}
+                  max={2026}
+                  value={selectedYear}
+                  onChange={e => {
+                    setSelectedYear(Number(e.target.value));
+                    setSelectedCountryKey(null);
+                    setMapResults([]);
+                    setMapQuery("");
+                    setMapError("");
+                  }}
+                  className="w-full h-2 appearance-none cursor-pointer rounded-full outline-none"
+                  style={{
+                    background: `linear-gradient(to right, #D4AF37 0%, #D4AF37 ${((selectedYear - 1700) / 326) * 100}%, #2a3a4a ${((selectedYear - 1700) / 326) * 100}%, #2a3a4a 100%)`,
+                  }}
+                />
+                {/* Era markers */}
+                <div className="flex justify-between mt-2 px-0.5">
+                  {ERA_MARKERS.map(m => (
+                    <button
+                      key={m.year}
+                      onClick={() => { setSelectedYear(m.year); setSelectedCountryKey(null); setMapResults([]); setMapQuery(""); }}
+                      className={`text-xs transition-colors hover:text-primary ${selectedYear === m.year ? "text-primary font-bold" : "text-muted-foreground/60"}`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* World Map Card */}
+            <div className="bg-card border border-border/50 rounded-3xl overflow-hidden shadow-xl relative">
+              {/* Header */}
+              <div className="flex items-center gap-3 p-4 border-b border-border/30">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                  <Map className="w-4 h-4 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-serif font-semibold text-foreground">
+                    The World in <span className="text-primary">{selectedYear}</span>
+                  </h2>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {hoveredEntity
+                      ? <><span className="text-primary font-medium">{hoveredEntity}</span> — click to find coins</>
+                      : "Hover a territory to see its historical name · Click to discover coins"}
+                  </p>
+                </div>
+                {selectedCountryKey && (
+                  <button
+                    onClick={() => { setSelectedCountryKey(null); setMapResults([]); setMapQuery(""); setMapError(""); }}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" /> Clear
+                  </button>
+                )}
+              </div>
+
+              {/* Map */}
+              <div className="relative" style={{ background: "#0a1929", height: "420px" }}>
+                <ComposableMap
+                  projection="geoMercator"
+                  projectionConfig={{ scale: 130, center: [15, 20] }}
+                  style={{ width: "100%", height: "100%" }}
+                >
+                  <ZoomableGroup zoom={1} minZoom={0.8} maxZoom={6}>
+                    <Geographies geography={GEO_URL}>
+                      {({ geographies }) =>
+                        geographies.map(geo => {
+                          const name: string = geo.properties.name;
+                          const entity = getHistoricalEntity(name, selectedYear);
+                          const isSelected = selectedCountryKey === geo.rsmKey;
+                          const isHovered = hoveredCountry === geo.rsmKey;
+                          const fill = getMapFill(name, selectedYear, isSelected, isHovered);
+
+                          return (
+                            <Geography
+                              key={geo.rsmKey}
+                              geography={geo}
+                              onMouseEnter={(evt) => {
+                                setHoveredCountry(geo.rsmKey);
+                                setHoveredEntity(entity !== name ? `${entity}` : name);
+                                const rect = (evt.currentTarget as SVGElement).closest("svg")?.getBoundingClientRect();
+                                if (rect) {
+                                  setTooltipPos({ x: evt.clientX - rect.left, y: evt.clientY - rect.top });
+                                }
+                              }}
+                              onMouseMove={(evt) => {
+                                const rect = (evt.currentTarget as SVGElement).closest("svg")?.getBoundingClientRect();
+                                if (rect) {
+                                  setTooltipPos({ x: evt.clientX - rect.left, y: evt.clientY - rect.top });
+                                }
+                              }}
+                              onMouseLeave={() => {
+                                setHoveredCountry(null);
+                                setHoveredEntity(null);
+                              }}
+                              onClick={() => handleMapClick(geo)}
+                              style={{
+                                default: {
+                                  fill,
+                                  stroke: "#0a1929",
+                                  strokeWidth: 0.4,
+                                  outline: "none",
+                                  cursor: "pointer",
+                                  transition: "fill 0.15s ease",
+                                },
+                                hover: {
+                                  fill: isSelected ? "#D4AF37" : getMapFill(name, selectedYear, false, true),
+                                  stroke: "#0a1929",
+                                  strokeWidth: 0.4,
+                                  outline: "none",
+                                  cursor: "pointer",
+                                },
+                                pressed: {
+                                  fill: "#c4a030",
+                                  stroke: "#0a1929",
+                                  strokeWidth: 0.4,
+                                  outline: "none",
+                                },
+                              }}
+                            />
+                          );
+                        })
+                      }
+                    </Geographies>
+                  </ZoomableGroup>
+                </ComposableMap>
+
+                {/* Hover tooltip */}
+                {hoveredEntity && (
+                  <div
+                    className="absolute pointer-events-none z-20 bg-black/90 text-white text-xs px-3 py-1.5 rounded-lg border border-primary/30 shadow-xl whitespace-nowrap"
+                    style={{
+                      left: Math.min(tooltipPos.x + 12, 700),
+                      top: Math.max(tooltipPos.y - 40, 8),
+                    }}
+                  >
+                    <span className="text-primary font-semibold">{hoveredEntity}</span>
+                    <span className="text-white/60 ml-2">· {selectedYear}</span>
+                  </div>
+                )}
+
+                {/* Map legend */}
+                <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 max-w-xs">
+                  {[
+                    { key: "ottoman", label: "Ottoman" },
+                    { key: "russian", label: "Russian" },
+                    { key: "british", label: "British" },
+                    { key: "french", label: "French" },
+                    { key: "austrian", label: "Habsburg" },
+                    { key: "german", label: "German" },
+                    { key: "modern", label: "Other" },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="flex items-center gap-1 bg-black/60 rounded px-1.5 py-0.5">
+                      <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: ENTITY_COLORS[key]?.fill }} />
+                      <span className="text-white/70 text-[10px]">{label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Searching overlay */}
+                {mapSearching && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
+                    <div className="bg-black/80 rounded-2xl px-6 py-4 flex items-center gap-3 border border-primary/30">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      <span className="text-white text-sm font-medium">Searching numismatic records…</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Results Panel */}
+            {(mapQuery || mapError) && (
+              <div className="bg-card border border-border/50 rounded-3xl p-5 shadow-xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <Coins className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-serif font-semibold text-foreground">Discovery Results</h2>
+                    {mapQuery && <p className="text-xs text-primary mt-0.5">{mapQuery}</p>}
+                  </div>
+                  {mapResults.length > 0 && (
+                    <span className="ml-auto text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+                      {mapResults.length} coin{mapResults.length !== 1 ? "s" : ""} found
+                    </span>
+                  )}
+                </div>
+
+                {mapError && (
+                  <p className="text-sm text-muted-foreground italic">{mapError}</p>
+                )}
+
+                {mapResults.length > 0 && (
+                  <div className="space-y-2">
+                    {mapResults.map(coin => (
+                      <button
+                        key={coin.id}
+                        data-testid={`card-map-result-${coin.id}`}
+                        onClick={() => handleSelectCoin(coin)}
+                        className="w-full flex items-center gap-4 p-3 bg-background rounded-xl border border-border hover:border-primary/60 hover:bg-primary/5 transition-all text-left group"
+                      >
+                        <div className="w-14 h-14 rounded-xl bg-muted border border-border overflow-hidden flex-shrink-0">
+                          {coin.obverse?.thumbnail ? (
+                            <img src={coin.obverse.thumbnail} alt={coin.title} className="w-full h-full object-cover"
+                              onError={e => (e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-muted-foreground text-xs font-serif">?</div>')} />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs font-serif">
+                              {coin.title[0]}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground truncate group-hover:text-primary transition-colors text-sm">{coin.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {coin.issuer?.name && <span>{coin.issuer.name}</span>}
+                            {coin.min_year && <span className="ml-2 text-primary/70">{yearLabel(coin.min_year, coin.max_year)}</span>}
+                            <span className="ml-2 text-muted-foreground/50">N#{coin.id}</span>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors hidden sm:block">Add to vault</span>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {isFetchingDetail && (
+                  <div className="flex items-center justify-center gap-3 py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    <span className="text-muted-foreground text-sm">Fetching coin details…</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Help text when nothing is selected */}
+            {!mapQuery && !mapError && (
+              <div className="text-center py-4">
+                <p className="text-muted-foreground text-sm">
+                  Can't find what you're looking for?{" "}
+                  <button onClick={() => setMode("search")} className="text-primary hover:underline font-medium">
+                    Search the database directly
+                  </button>
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ══ SEARCH MODE ════════════════════════════════════════════════════════ */}
         {mode === "search" && (
           <div className="space-y-6">
             <div className="bg-card border border-border/50 rounded-3xl p-6 md:p-10 shadow-xl">
@@ -328,14 +703,13 @@ export default function AddCoin() {
                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                   <Sparkles className="w-4 h-4 text-primary" />
                 </div>
-                <h2 className="font-serif text-lg font-semibold text-foreground">AI-Powered Search</h2>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">Global Database</span>
+                <h2 className="font-serif text-lg font-semibold text-foreground">Database Search</h2>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">Global</span>
               </div>
               <p className="text-sm text-muted-foreground mb-6">
                 Type a coin name, year, issuer, or ruler. Select a result to auto-fill all known details.
               </p>
 
-              {/* Search Input */}
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
                 <input
@@ -354,7 +728,6 @@ export default function AddCoin() {
                 )}
               </div>
 
-              {/* Loading Spinner */}
               {isSearching && (
                 <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground">
                   <Loader2 className="w-4 h-4 animate-spin text-primary" />
@@ -362,7 +735,6 @@ export default function AddCoin() {
                 </div>
               )}
 
-              {/* Fetching Detail */}
               {isFetchingDetail && (
                 <div className="flex items-center justify-center gap-3 mt-8 py-6">
                   <Loader2 className="w-6 h-6 animate-spin text-primary" />
@@ -370,12 +742,10 @@ export default function AddCoin() {
                 </div>
               )}
 
-              {/* Error */}
               {searchError && !isSearching && (
                 <p className="text-sm text-muted-foreground mt-4 italic">{searchError}</p>
               )}
 
-              {/* Results List */}
               {results.length > 0 && !isFetchingDetail && (
                 <div className="mt-4 space-y-2">
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">
@@ -390,12 +760,8 @@ export default function AddCoin() {
                     >
                       <div className="w-14 h-14 rounded-xl bg-muted border border-border overflow-hidden flex-shrink-0">
                         {coin.obverse?.thumbnail ? (
-                          <img
-                            src={coin.obverse.thumbnail}
-                            alt={coin.title}
-                            className="w-full h-full object-cover"
-                            onError={e => (e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-muted-foreground text-xs">N/A</div>')}
-                          />
+                          <img src={coin.obverse.thumbnail} alt={coin.title} className="w-full h-full object-cover"
+                            onError={e => (e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-muted-foreground text-xs">N/A</div>')} />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs font-serif">
                             {coin.title[0]}
@@ -417,7 +783,6 @@ export default function AddCoin() {
               )}
             </div>
 
-            {/* Manual Entry Option */}
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-2">Can't find your coin?</p>
               <button
@@ -432,21 +797,19 @@ export default function AddCoin() {
           </div>
         )}
 
-        {/* ── SELECTED / MANUAL FORM ────────────────────────────── */}
+        {/* ══ SELECTED / MANUAL FORM ═════════════════════════════════════════════ */}
         {(mode === "selected" || mode === "manual") && (
           <form onSubmit={handleSubmit} className="space-y-6">
 
-            {/* Header bar */}
             <div className="flex items-center justify-between bg-card border border-border/50 rounded-2xl px-5 py-3">
-              <button type="button" onClick={resetToSearch} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                <ArrowLeft className="w-4 h-4" /> Back to Search
+              <button type="button" onClick={resetToDiscover} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <ArrowLeft className="w-4 h-4" /> Back to Discovery
               </button>
               {mode === "selected" && selectedMeta && (
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-primary" />
                   <span className="text-xs font-medium text-primary">Auto-filled from Numista N#{selectedMeta.id}</span>
-                  <a
-                    href={`https://en.numista.com/catalogue/pieces${selectedMeta.id}.html`}
+                  <a href={`https://en.numista.com/catalogue/pieces${selectedMeta.id}.html`}
                     target="_blank" rel="noreferrer"
                     className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
                   >
@@ -461,48 +824,35 @@ export default function AddCoin() {
 
             <div className="bg-card border border-border/50 p-6 md:p-10 rounded-3xl shadow-xl space-y-8">
 
-              {/* Images — Obverse + Reverse */}
+              {/* Images */}
               <div className="space-y-3">
                 <label className="text-sm font-semibold text-foreground uppercase tracking-wider">
                   Coin Photos
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <ImageUploadField
-                    label="Obverse"
-                    badge="Obverse"
-                    badgeVariant="primary"
-                    hint="Front face · Required"
-                    value={formData.photoUrl}
-                    onChange={url => setFormData(prev => ({ ...prev, photoUrl: url }))}
-                    autoFilled={mode === "selected"}
-                    testId="input-photo-front"
+                    label="Obverse" badge="Obverse" badgeVariant="primary" hint="Front face · Required"
+                    value={formData.photoUrl} onChange={url => setFormData(prev => ({ ...prev, photoUrl: url }))}
+                    autoFilled={mode === "selected"} testId="input-photo-front"
                   />
                   <ImageUploadField
-                    label="Reverse"
-                    badge="Reverse"
-                    badgeVariant="muted"
-                    hint="Back face · Optional"
-                    value={formData.backPhotoUrl}
-                    onChange={url => setFormData(prev => ({ ...prev, backPhotoUrl: url }))}
+                    label="Reverse" badge="Reverse" badgeVariant="muted" hint="Back face · Optional"
+                    value={formData.backPhotoUrl} onChange={url => setFormData(prev => ({ ...prev, backPhotoUrl: url }))}
                     testId="input-photo-back"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Title */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
                     Title / Name
                     {mode === "selected" && formData.title && <CheckCircle2 className="w-3.5 h-3.5 text-primary" />}
                   </label>
                   <input required type="text" name="title" value={formData.title} onChange={handleChange}
-                    placeholder="e.g. 1922 King Fuad I Gold 500 Piastres"
-                    className={FIELD_CLASS}
-                  />
+                    placeholder="e.g. 1922 King Fuad I Gold 500 Piastres" className={FIELD_CLASS} />
                 </div>
 
-                {/* Category */}
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
                     Category
@@ -519,7 +869,6 @@ export default function AddCoin() {
                 </div>
               </div>
 
-              {/* Metal + Estimated Value */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-foreground uppercase tracking-wider flex items-center gap-2">
@@ -527,13 +876,10 @@ export default function AddCoin() {
                     {mode === "selected" && formData.metalType && <CheckCircle2 className="w-3.5 h-3.5 text-primary" />}
                   </label>
                   <input type="text" name="metalType" value={formData.metalType} onChange={handleChange}
-                    placeholder="e.g. 90% Gold, Copper"
-                    className={FIELD_CLASS}
-                  />
+                    placeholder="e.g. 90% Gold, Copper" className={FIELD_CLASS} />
                 </div>
               </div>
 
-              {/* Description — manual only; auto-fill shows it read-only with edit option */}
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-foreground uppercase tracking-wider flex items-center justify-between">
                   <span className="flex items-center gap-2">
@@ -561,11 +907,10 @@ export default function AddCoin() {
                   placeholder={mode === "selected"
                     ? "Add your personal notes, condition grade, provenance..."
                     : "Describe the condition, historical context, and unique features..."}
-                  className={`${FIELD_CLASS} resize-none custom-scrollbar`}
+                  className={`${FIELD_CLASS} resize-none`}
                 />
               </div>
 
-              {/* Numista ID (hidden but shown for transparency) */}
               {formData.numistaId && (
                 <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/5 border border-primary/20 text-sm">
                   <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
@@ -580,9 +925,8 @@ export default function AddCoin() {
                 </div>
               )}
 
-              {/* Actions */}
               <div className="pt-4 border-t border-border/30 flex justify-end gap-3">
-                <button type="button" onClick={resetToSearch}
+                <button type="button" onClick={resetToDiscover}
                   className="px-6 py-3 font-medium text-muted-foreground hover:text-foreground transition-colors">
                   Cancel
                 </button>
@@ -603,6 +947,42 @@ export default function AddCoin() {
           </form>
         )}
       </div>
+
+      {/* Slider track styling */}
+      <style>{`
+        input[type="range"] {
+          -webkit-appearance: none;
+          appearance: none;
+          height: 6px;
+          border-radius: 9999px;
+          outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: #D4AF37;
+          cursor: pointer;
+          border: 3px solid #0a1929;
+          box-shadow: 0 0 0 2px #D4AF37, 0 2px 8px rgba(212,175,55,0.4);
+          transition: transform 0.1s, box-shadow 0.1s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+          transform: scale(1.15);
+          box-shadow: 0 0 0 3px #D4AF37, 0 4px 16px rgba(212,175,55,0.6);
+        }
+        input[type="range"]::-moz-range-thumb {
+          width: 22px;
+          height: 22px;
+          border-radius: 50%;
+          background: #D4AF37;
+          cursor: pointer;
+          border: 3px solid #0a1929;
+          box-shadow: 0 0 0 2px #D4AF37;
+        }
+      `}</style>
     </Shell>
   );
 }
