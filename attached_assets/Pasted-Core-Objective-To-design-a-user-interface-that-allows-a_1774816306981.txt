@@ -1,0 +1,41 @@
+Core Objective: To design a user interface that allows a user to discover coins based on a specific geographic location at a precise moment in historical time.
+
+User Flow & Component Interaction:
+
+1. The Temporal Input (The Timeline):
+
+Component: A horizontal input linear scale (timeline) representing time.
+
+Data Range: From [Specify Start Year, e.g., 1700] to the current year [2026].
+
+Interaction: The user moves a selector along this scale.
+
+Output: The selector must output a single, precise integer (The Selected Year).
+
+2. The Geospatial Input (The Dynamic Map):
+
+Component: A vector-based, interactive political world map.
+
+Dependency: This component is dependent on the output of Component 1 (The Selected Year).
+
+Action: When The Selected Year changes, the map must redraw all political borders to reflect the documented geopolitical reality of that specific year. (e.g., Selecting 1910 must show the Austro-Hungarian Empire; selecting 1920 must show the redefined borders following WWI).
+
+Interaction: The user clicks on a specific, bounded geographic region (A Country/Empire).
+
+Output: The click must capture and output the unique identifier of that specific geopolitical entity as it existed in The Selected Year.
+
+3. The Data Query & Display (The Results Interface):
+
+Component: A search input field and an adjacent results display area.
+
+Trigger: This component is triggered when the user clicks a country on the map (Component 2).
+
+The Query: The system executes a database query (e.g., via Numista API) using two required parameters:
+
+parameter_1: The Selected Year (from Component 1).
+
+parameter_2: The Geopolitical Entity ID (from Component 2).
+
+Search Field State: The search input field must automatically populate with a text string summarizing the active query (e.g., "Coins of [Country Name] minted in [Year]").
+
+Results Display: The results area must populate with a filtered list of all matching numismatic items. Each result must show essential metadata (Denomination, Metal, Ruler/Issuing Authority) and a primary image of the coin.
