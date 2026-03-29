@@ -108,8 +108,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <Link href="/search" className="w-9 h-9 flex items-center justify-center rounded-full border border-border bg-card hover:bg-muted hover:border-primary/50 text-primary transition-all">
               <Search className="w-4 h-4" />
             </Link>
-            {!isAuthenticated && (
-               <button 
+            {isAuthenticated ? (
+              <button 
+                onClick={() => logout()}
+                className="w-9 h-9 flex items-center justify-center rounded-full border border-border bg-card hover:bg-destructive/10 hover:border-destructive/50 text-muted-foreground hover:text-destructive transition-all"
+                data-testid="button-mobile-logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            ) : (
+              <button 
                 onClick={() => window.location.href = "/auth"}
                 className="text-xs font-semibold text-primary"
               >
