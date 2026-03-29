@@ -8,6 +8,7 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Send, Search, MessageSquare, Users, Plus, UserPlus, Bell, Check, X, LogOut, ChevronLeft, Mic, Phone, PhoneOff, PhoneIncoming, MicOff, Volume2 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { onWS } from "@/lib/websocket";
 
 type ViewMode = "dm" | "groups";
 type CallStatus = "idle" | "calling" | "incoming" | "active";
@@ -51,12 +52,12 @@ export default function Messages() {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
-  const callPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const incomingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const callDurationRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const processedCallerCandidates = useRef(0);
-  const processedReceiverCandidates = useRef(0);
   const pendingCandidates = useRef<RTCIceCandidate[]>([]);
+  const callStatusRef = useRef<CallStatus>("idle");
+
+  // Keep callStatusRef in sync
+  useEffect(() => { callStatusRef.current = callStatus; }, [callStatus]);
 
   useEffect(() => {
     if (preselectedUserId) { setActiveUserId(preselectedUserId); setViewMode("dm"); }
@@ -73,37 +74,20 @@ export default function Messages() {
   const respondInvitation = useRespondToInvitation();
   const leaveGroup = useLeaveGroup();
 
+  const activeUserFromConvs = conversations?.find((c: any) => c.id === activeUserId);
+  const { data: fetchedActiveUser } = useUserProfile(activeUserId && !activeUserFromConvs ? activeUserId : undefined);
+  const activeUser = activeUserFromConvs || fetchedActiveUser;
+  const activeGroup = userGroups?.find((g: any) => g.id === activeGroupId);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, groupMsgs]);
 
-  // Poll for incoming calls when user is in DM mode
-  useEffect(() => {
-    if (!user || viewMode !== "dm") return;
-    if (callStatus !== "idle") return;
-    incomingPollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch("/api/calls/incoming", { credentials: "include" });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data && data.status === "pending") {
-          setIncomingCallData(data);
-          setCallId(data.id);
-          setCallStatus("incoming");
-        }
-      } catch {}
-    }, 3000);
-    return () => { if (incomingPollRef.current) clearInterval(incomingPollRef.current); };
-  }, [user, viewMode, callStatus]);
-
   const cleanupCall = useCallback(() => {
     if (pcRef.current) { pcRef.current.close(); pcRef.current = null; }
     if (localStreamRef.current) { localStreamRef.current.getTracks().forEach(t => t.stop()); localStreamRef.current = null; }
-    if (callPollRef.current) { clearInterval(callPollRef.current); callPollRef.current = null; }
     if (callDurationRef.current) { clearInterval(callDurationRef.current); callDurationRef.current = null; }
     if (remoteAudioRef.current) { remoteAudioRef.current.srcObject = null; }
-    processedCallerCandidates.current = 0;
-    processedReceiverCandidates.current = 0;
     pendingCandidates.current = [];
     setCallStatus("idle");
     setCallId(null);
@@ -115,6 +99,13 @@ export default function Messages() {
   const startCallTimer = useCallback(() => {
     setCallDuration(0);
     callDurationRef.current = setInterval(() => setCallDuration(d => d + 1), 1000);
+  }, []);
+
+  const flushPendingCandidates = useCallback(async (pc: RTCPeerConnection) => {
+    for (const c of pendingCandidates.current) {
+      try { await pc.addIceCandidate(c); } catch {}
+    }
+    pendingCandidates.current = [];
   }, []);
 
   const createPeerConnection = useCallback((onCandidate: (c: RTCIceCandidate) => void) => {
@@ -131,16 +122,88 @@ export default function Messages() {
     return pc;
   }, []);
 
-  const flushPendingCandidates = useCallback(async (pc: RTCPeerConnection) => {
-    for (const c of pendingCandidates.current) {
-      try { await pc.addIceCandidate(c); } catch {}
-    }
-    pendingCandidates.current = [];
+  // --- WebSocket: incoming call notification ---
+  useEffect(() => {
+    if (!user) return;
+    return onWS("call:incoming", async (data) => {
+      if (callStatusRef.current !== "idle") return;
+      try {
+        const res = await fetch(`/api/calls/${data.callId}`, { credentials: "include" });
+        if (!res.ok) return;
+        const session = await res.json();
+        setIncomingCallData(session);
+        setCallId(data.callId);
+        setCallStatus("incoming");
+      } catch {}
+    });
+  }, [user]);
+
+  // --- WebSocket: call state updates (for caller waiting for answer) ---
+  useEffect(() => {
+    if (!callId) return;
+    return onWS("call:update", async (data) => {
+      if (data.callId !== callId) return;
+      const pc = pcRef.current;
+      const status = callStatusRef.current;
+
+      if (data.status === "rejected" || data.status === "ended") {
+        cleanupCall();
+        return;
+      }
+      if (data.status === "active" && data.sdpAnswer && status === "calling" && pc) {
+        if (pc.signalingState !== "stable") {
+          try {
+            await pc.setRemoteDescription({ type: "answer", sdp: data.sdpAnswer });
+            await flushPendingCandidates(pc);
+            setCallStatus("active");
+            startCallTimer();
+          } catch {}
+        }
+      }
+      // Receiver: update incoming call data if sdpOffer arrives
+      if (status === "incoming" && data.sdpOffer) {
+        setIncomingCallData((prev: any) => ({ ...prev, sdpOffer: data.sdpOffer }));
+      }
+    });
+  }, [callId, cleanupCall, flushPendingCandidates, startCallTimer]);
+
+  // --- WebSocket: ICE candidates delivered in real-time ---
+  useEffect(() => {
+    if (!callId) return;
+    return onWS("call:candidates", async (data) => {
+      if (data.callId !== callId) return;
+      const pc = pcRef.current;
+      if (!pc) return;
+      for (const c of data.candidates) {
+        const ice = new RTCIceCandidate(JSON.parse(c));
+        if (pc.remoteDescription) {
+          try { await pc.addIceCandidate(ice); } catch {}
+        } else {
+          pendingCandidates.current.push(ice);
+        }
+      }
+    });
+  }, [callId]);
+
+  const sendCandidates = useCallback(async (cid: number, role: "caller" | "receiver", candidates: RTCIceCandidate[]) => {
+    if (candidates.length === 0) return;
+    await fetch(`/api/calls/${cid}/candidates/${role}`, {
+      method: "POST", credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ candidates: candidates.map(c => JSON.stringify(c)) }),
+    });
   }, []);
 
-  // Initiate a call
+  const waitForGathering = (pc: RTCPeerConnection) =>
+    new Promise<void>(resolve => {
+      if (pc.iceGatheringState === "complete") { resolve(); return; }
+      const check = () => { if (pc.iceGatheringState === "complete") { pc.removeEventListener("icegatheringstatechange", check); resolve(); } };
+      pc.addEventListener("icegatheringstatechange", check);
+      setTimeout(resolve, 3000);
+    });
+
   const handleStartCall = useCallback(async () => {
-    if (!activeUserId || callStatus !== "idle") return;
+    if (!activeUserId || callStatusRef.current !== "idle") return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = stream;
@@ -163,14 +226,7 @@ export default function Messages() {
 
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-
-      // Wait for ICE gathering then send offer + candidates
-      await new Promise<void>(resolve => {
-        if (pc.iceGatheringState === "complete") { resolve(); return; }
-        const check = () => { if (pc.iceGatheringState === "complete") { pc.removeEventListener("icegatheringstatechange", check); resolve(); } };
-        pc.addEventListener("icegatheringstatechange", check);
-        setTimeout(resolve, 3000);
-      });
+      await waitForGathering(pc);
 
       await fetch(`/api/calls/${cid}`, {
         method: "PATCH", credentials: "include",
@@ -178,54 +234,24 @@ export default function Messages() {
         body: JSON.stringify({ sdpOffer: pc.localDescription?.sdp }),
       });
 
-      if (candidateBuffer.length > 0) {
-        await fetch(`/api/calls/${cid}/candidates/caller`, {
-          method: "POST", credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ candidates: candidateBuffer.map(c => JSON.stringify(c)) }),
-        });
-      }
-
-      // Poll for answer
-      callPollRef.current = setInterval(async () => {
-        try {
-          const r = await fetch(`/api/calls/${cid}`, { credentials: "include" });
-          if (!r.ok) return;
-          const s = await r.json();
-
-          if (s.status === "rejected" || s.status === "ended") { cleanupCall(); return; }
-          if (s.status === "active" && s.sdpAnswer && pc.signalingState !== "stable") {
-            await pc.setRemoteDescription({ type: "answer", sdp: s.sdpAnswer });
-            await flushPendingCandidates(pc);
-            setCallStatus("active");
-            startCallTimer();
-          }
-          if (s.status === "active" || s.status === "pending") {
-            const rcands = (s.receiverCandidates || []).slice(processedReceiverCandidates.current);
-            if (rcands.length > 0) {
-              processedReceiverCandidates.current += rcands.length;
-              for (const c of rcands) {
-                const ice = new RTCIceCandidate(JSON.parse(c));
-                if (pc.remoteDescription) { try { await pc.addIceCandidate(ice); } catch {} }
-                else pendingCandidates.current.push(ice);
-              }
-            }
-          }
-        } catch {}
-      }, 2000);
+      await sendCandidates(cid, "caller", candidateBuffer);
     } catch (err: any) {
       toast({ title: "Call failed", description: err.message || "Could not access microphone", variant: "destructive" });
       cleanupCall();
     }
-  }, [activeUserId, callStatus, cleanupCall, createPeerConnection, flushPendingCandidates, startCallTimer, toast]);
+  }, [activeUserId, createPeerConnection, sendCandidates, cleanupCall, toast]);
 
-  // Accept an incoming call
   const handleAcceptCall = useCallback(async () => {
-    if (!callId || !incomingCallData?.sdpOffer) {
-      toast({ title: "Call not ready", description: "Waiting for caller...", variant: "destructive" });
-      return;
-    }
+    if (!callId) { cleanupCall(); return; }
     try {
+      let callData = incomingCallData;
+      if (!callData?.sdpOffer) {
+        const r = await fetch(`/api/calls/${callId}`, { credentials: "include" });
+        if (!r.ok) throw new Error("Could not fetch call");
+        callData = await r.json();
+      }
+      if (!callData?.sdpOffer) throw new Error("No offer yet");
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       localStreamRef.current = stream;
 
@@ -234,16 +260,16 @@ export default function Messages() {
       pcRef.current = pc;
       stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
-      await pc.setRemoteDescription({ type: "offer", sdp: incomingCallData.sdpOffer });
+      await pc.setRemoteDescription({ type: "offer", sdp: callData.sdpOffer });
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
+      await waitForGathering(pc);
 
-      await new Promise<void>(resolve => {
-        if (pc.iceGatheringState === "complete") { resolve(); return; }
-        const check = () => { if (pc.iceGatheringState === "complete") { pc.removeEventListener("icegatheringstatechange", check); resolve(); } };
-        pc.addEventListener("icegatheringstatechange", check);
-        setTimeout(resolve, 3000);
-      });
+      // Add any already-received caller candidates
+      for (const c of callData.callerCandidates || []) {
+        try { await pc.addIceCandidate(new RTCIceCandidate(JSON.parse(c))); } catch {}
+      }
+      await flushPendingCandidates(pc);
 
       await fetch(`/api/calls/${callId}`, {
         method: "PATCH", credentials: "include",
@@ -251,58 +277,31 @@ export default function Messages() {
         body: JSON.stringify({ sdpAnswer: pc.localDescription?.sdp, status: "active" }),
       });
 
-      if (candidateBuffer.length > 0) {
-        await fetch(`/api/calls/${callId}/candidates/receiver`, {
-          method: "POST", credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ candidates: candidateBuffer.map(c => JSON.stringify(c)) }),
-        });
-      }
-
-      // Add caller's candidates
-      const callerCands = (incomingCallData.callerCandidates || []).slice(processedCallerCandidates.current);
-      processedCallerCandidates.current += callerCands.length;
-      for (const c of callerCands) {
-        try { await pc.addIceCandidate(new RTCIceCandidate(JSON.parse(c))); } catch {}
-      }
+      await sendCandidates(callId, "receiver", candidateBuffer);
 
       setCallStatus("active");
       startCallTimer();
-
-      // Poll for new caller candidates + call end
-      callPollRef.current = setInterval(async () => {
-        try {
-          const r = await fetch(`/api/calls/${callId}`, { credentials: "include" });
-          if (!r.ok) return;
-          const s = await r.json();
-          if (s.status === "ended") { cleanupCall(); return; }
-          const newCands = (s.callerCandidates || []).slice(processedCallerCandidates.current);
-          if (newCands.length > 0) {
-            processedCallerCandidates.current += newCands.length;
-            for (const c of newCands) {
-              try { if (pc.remoteDescription) await pc.addIceCandidate(new RTCIceCandidate(JSON.parse(c))); } catch {}
-            }
-          }
-        } catch {}
-      }, 2000);
     } catch (err: any) {
       toast({ title: "Could not join call", description: err.message, variant: "destructive" });
+      if (callId) {
+        await fetch(`/api/calls/${callId}`, {
+          method: "PATCH", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "rejected" }),
+        });
+      }
+      cleanupCall();
+    }
+  }, [callId, incomingCallData, createPeerConnection, flushPendingCandidates, sendCandidates, cleanupCall, startCallTimer, toast]);
+
+  const handleRejectCall = useCallback(async () => {
+    if (callId) {
       await fetch(`/api/calls/${callId}`, {
         method: "PATCH", credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "rejected" }),
       });
-      cleanupCall();
     }
-  }, [callId, incomingCallData, createPeerConnection, cleanupCall, startCallTimer, toast]);
-
-  const handleRejectCall = useCallback(async () => {
-    if (!callId) { cleanupCall(); return; }
-    await fetch(`/api/calls/${callId}`, {
-      method: "PATCH", credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "rejected" }),
-    });
     cleanupCall();
   }, [callId, cleanupCall]);
 
@@ -352,7 +351,7 @@ export default function Messages() {
     await new Promise<void>(resolve => { mr.onstop = () => resolve(); mr.stop(); });
 
     const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-    if (blob.size < 1000) { setIsUploadingAudio(false); return; } // too short, discard
+    if (blob.size < 1000) { setIsUploadingAudio(false); return; }
 
     try {
       const form = new FormData();
@@ -360,10 +359,8 @@ export default function Messages() {
       const res = await fetch("/api/upload/audio", { method: "POST", body: form, credentials: "include" });
       if (!res.ok) throw new Error();
       const { url } = await res.json();
-
-      const targetId = viewMode === "dm" ? activeUserId : null;
-      if (targetId) {
-        sendMessage.mutate({ userId: targetId, content: "", audioUrl: url });
+      if (activeUserId) {
+        sendMessage.mutate({ userId: activeUserId, content: "", audioUrl: url });
       }
     } catch {
       toast({ title: "Failed to send voice note", variant: "destructive" });
@@ -372,7 +369,7 @@ export default function Messages() {
       mediaRecorderRef.current = null;
       audioChunksRef.current = [];
     }
-  }, [isRecording, viewMode, activeUserId, sendMessage, toast]);
+  }, [isRecording, activeUserId, sendMessage, toast]);
 
   const cancelRecording = useCallback(() => {
     if (!mediaRecorderRef.current) return;
@@ -384,11 +381,6 @@ export default function Messages() {
     setIsRecording(false);
     setRecordingSeconds(0);
   }, []);
-
-  const activeUserFromConvs = conversations?.find((c: any) => c.id === activeUserId);
-  const { data: fetchedActiveUser } = useUserProfile(activeUserId && !activeUserFromConvs ? activeUserId : undefined);
-  const activeUser = activeUserFromConvs || fetchedActiveUser;
-  const activeGroup = userGroups?.find((g: any) => g.id === activeGroupId);
 
   if (authLoading) return <Shell><LoadingSpinner /></Shell>;
   if (!user) { window.location.href = "/auth"; return null; }
@@ -429,7 +421,7 @@ export default function Messages() {
         <div className="flex-1 bg-card md:rounded-3xl border-x md:border border-border/50 flex overflow-hidden shadow-2xl relative">
 
           {/* Incoming Call Overlay */}
-          {callStatus === "incoming" && incomingCallData && (
+          {callStatus === "incoming" && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
               <div className="bg-card border border-primary/30 rounded-3xl p-8 text-center space-y-6 shadow-2xl max-w-xs w-full mx-4">
                 <div className="w-20 h-20 rounded-full bg-primary/20 border-2 border-primary/50 flex items-center justify-center mx-auto animate-pulse">
@@ -440,45 +432,16 @@ export default function Messages() {
                   <p className="font-serif text-xl text-foreground">{activeUser?.displayName || "Someone"}</p>
                 </div>
                 <div className="flex gap-4 justify-center">
-                  <button
-                    data-testid="button-reject-call"
-                    onClick={handleRejectCall}
-                    className="w-16 h-16 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center hover:bg-red-500/40 transition-colors"
-                  >
+                  <button data-testid="button-reject-call" onClick={handleRejectCall}
+                    className="w-16 h-16 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center hover:bg-red-500/40 transition-colors">
                     <PhoneOff className="w-7 h-7 text-red-400" />
                   </button>
-                  <button
-                    data-testid="button-accept-call"
-                    onClick={handleAcceptCall}
-                    className="w-16 h-16 rounded-full bg-green-500/20 border border-green-500/50 flex items-center justify-center hover:bg-green-500/40 transition-colors"
-                  >
+                  <button data-testid="button-accept-call" onClick={handleAcceptCall}
+                    className="w-16 h-16 rounded-full bg-green-500/20 border border-green-500/50 flex items-center justify-center hover:bg-green-500/40 transition-colors">
                     <Phone className="w-7 h-7 text-green-400" />
                   </button>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Active Call Bar */}
-          {callStatus === "active" && (
-            <div className="absolute top-0 left-0 right-0 z-40 bg-green-900/90 backdrop-blur border-b border-green-500/30 px-4 py-2 flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <Volume2 className="w-4 h-4 text-green-400" />
-              <span className="text-green-300 text-sm font-medium flex-1">Voice Call — {formatDuration(callDuration)}</span>
-              <button
-                data-testid="button-toggle-mute"
-                onClick={toggleMute}
-                className={`p-2 rounded-full transition-colors ${isMuted ? "bg-red-500/30 text-red-400" : "bg-white/10 text-muted-foreground hover:text-foreground"}`}
-              >
-                {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              </button>
-              <button
-                data-testid="button-end-call"
-                onClick={handleEndCall}
-                className="px-4 py-1.5 rounded-full bg-red-500/20 border border-red-500/50 text-red-400 text-sm font-medium hover:bg-red-500/40 transition-colors flex items-center gap-2"
-              >
-                <PhoneOff className="w-3.5 h-3.5" /> End
-              </button>
             </div>
           )}
 
@@ -493,14 +456,28 @@ export default function Messages() {
                   <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">Calling...</p>
                   <p className="font-serif text-xl text-foreground">{activeUser?.displayName || "..."}</p>
                 </div>
-                <button
-                  data-testid="button-cancel-call"
-                  onClick={handleEndCall}
-                  className="w-16 h-16 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center hover:bg-red-500/40 transition-colors mx-auto"
-                >
+                <button data-testid="button-cancel-call" onClick={handleEndCall}
+                  className="w-16 h-16 rounded-full bg-red-500/20 border border-red-500/50 flex items-center justify-center hover:bg-red-500/40 transition-colors mx-auto">
                   <PhoneOff className="w-7 h-7 text-red-400" />
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Active Call Bar */}
+          {callStatus === "active" && (
+            <div className="absolute top-0 left-0 right-0 z-40 bg-green-900/90 backdrop-blur border-b border-green-500/30 px-4 py-2 flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <Volume2 className="w-4 h-4 text-green-400" />
+              <span className="text-green-300 text-sm font-medium flex-1">Voice Call — {formatDuration(callDuration)}</span>
+              <button data-testid="button-toggle-mute" onClick={toggleMute}
+                className={`p-2 rounded-full transition-colors ${isMuted ? "bg-red-500/30 text-red-400" : "bg-white/10 text-muted-foreground hover:text-foreground"}`}>
+                {isMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <button data-testid="button-end-call" onClick={handleEndCall}
+                className="px-4 py-1.5 rounded-full bg-red-500/20 border border-red-500/50 text-red-400 text-sm font-medium hover:bg-red-500/40 transition-colors flex items-center gap-2">
+                <PhoneOff className="w-3.5 h-3.5" /> End
+              </button>
             </div>
           )}
 
@@ -513,40 +490,27 @@ export default function Messages() {
                 </h2>
                 <div className="flex items-center gap-2">
                   {invitationCount > 0 && (
-                    <button
-                      onClick={() => setShowInvitations(!showInvitations)}
-                      className="relative p-2 rounded-lg hover:bg-white/10 transition-colors"
-                      data-testid="button-invitations"
-                    >
+                    <button onClick={() => setShowInvitations(!showInvitations)} className="relative p-2 rounded-lg hover:bg-white/10 transition-colors" data-testid="button-invitations">
                       <Bell className="w-4 h-4 text-primary" />
                       <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center font-bold">{invitationCount}</span>
                     </button>
                   )}
                   {viewMode === "groups" && (
-                    <button
-                      onClick={() => setShowCreateGroup(true)}
-                      className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                      data-testid="button-create-group"
-                    >
+                    <button onClick={() => setShowCreateGroup(true)} className="p-2 rounded-lg hover:bg-white/10 transition-colors" data-testid="button-create-group">
                       <Plus className="w-4 h-4 text-primary" />
                     </button>
                   )}
                 </div>
               </div>
-
               <div className="flex rounded-lg bg-black/30 border border-border/30 p-1 gap-1">
-                <button
-                  onClick={() => { setViewMode("dm"); setActiveGroupId(null); }}
+                <button onClick={() => { setViewMode("dm"); setActiveGroupId(null); }}
                   className={`flex-1 py-2 text-xs font-semibold rounded-md transition-colors ${viewMode === "dm" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                  data-testid="tab-dm"
-                >
+                  data-testid="tab-dm">
                   <MessageSquare className="w-3 h-3 inline mr-1" />DMs
                 </button>
-                <button
-                  onClick={() => { setViewMode("groups"); setActiveUserId(null); }}
+                <button onClick={() => { setViewMode("groups"); setActiveUserId(null); }}
                   className={`flex-1 py-2 text-xs font-semibold rounded-md transition-colors ${viewMode === "groups" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                  data-testid="tab-groups"
-                >
+                  data-testid="tab-groups">
                   <Users className="w-3 h-3 inline mr-1" />Groups
                   {invitationCount > 0 && <span className="ml-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white inline-flex items-center justify-center">{invitationCount}</span>}
                 </button>
@@ -559,16 +523,12 @@ export default function Messages() {
                 {pendingInvitations?.map((inv: any) => (
                   <div key={inv.id} className="flex items-center justify-between bg-card/80 rounded-lg p-3 border border-border/30">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{inv.group?.name}</p>
+                      <p className="text-sm font-semibold truncate">{inv.group?.name}</p>
                       <p className="text-xs text-muted-foreground">from {inv.inviter?.displayName || "Unknown"}</p>
                     </div>
                     <div className="flex gap-1 ml-2">
-                      <button onClick={() => respondInvitation.mutate({ invitationId: inv.id, accept: true })} className="p-1.5 rounded-full bg-green-500/20 hover:bg-green-500/40 transition-colors" data-testid={`button-accept-invite-${inv.id}`}>
-                        <Check className="w-3.5 h-3.5 text-green-400" />
-                      </button>
-                      <button onClick={() => respondInvitation.mutate({ invitationId: inv.id, accept: false })} className="p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/40 transition-colors" data-testid={`button-decline-invite-${inv.id}`}>
-                        <X className="w-3.5 h-3.5 text-red-400" />
-                      </button>
+                      <button onClick={() => respondInvitation.mutate({ invitationId: inv.id, accept: true })} className="p-1.5 rounded-full bg-green-500/20 hover:bg-green-500/40 transition-colors" data-testid={`button-accept-invite-${inv.id}`}><Check className="w-3.5 h-3.5 text-green-400" /></button>
+                      <button onClick={() => respondInvitation.mutate({ invitationId: inv.id, accept: false })} className="p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/40 transition-colors" data-testid={`button-decline-invite-${inv.id}`}><X className="w-3.5 h-3.5 text-red-400" /></button>
                     </div>
                   </div>
                 ))}
@@ -595,13 +555,12 @@ export default function Messages() {
                   conversations?.map((conv: any) => (
                     <button key={conv.id} onClick={() => setActiveUserId(conv.id)}
                       className={`w-full p-4 flex items-center gap-3 text-left border-b border-border/20 transition-colors ${activeUserId === conv.id ? 'bg-primary/10 border-l-2 border-l-primary' : 'hover:bg-white/5'}`}
-                      data-testid={`button-conversation-${conv.id}`}
-                    >
+                      data-testid={`button-conversation-${conv.id}`}>
                       <div className="w-12 h-12 rounded-full bg-muted border border-border/50 overflow-hidden flex-shrink-0">
                         {conv.profileImageUrl ? <img src={conv.profileImageUrl} alt="User" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center font-serif text-lg bg-black/50">{(conv.displayName || "U")[0].toUpperCase()}</div>}
                       </div>
                       <div className="flex-1 overflow-hidden">
-                        <p className="font-semibold text-foreground truncate">{conv.displayName || "Unknown"}</p>
+                        <p className="font-semibold truncate">{conv.displayName || "Unknown"}</p>
                         <p className="text-xs text-muted-foreground truncate">Click to view messages</p>
                       </div>
                     </button>
@@ -619,13 +578,10 @@ export default function Messages() {
                   userGroups?.map((group: any) => (
                     <button key={group.id} onClick={() => setActiveGroupId(group.id)}
                       className={`w-full p-4 flex items-center gap-3 text-left border-b border-border/20 transition-colors ${activeGroupId === group.id ? 'bg-primary/10 border-l-2 border-l-primary' : 'hover:bg-white/5'}`}
-                      data-testid={`button-group-${group.id}`}
-                    >
-                      <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center flex-shrink-0">
-                        <Users className="w-5 h-5 text-primary" />
-                      </div>
+                      data-testid={`button-group-${group.id}`}>
+                      <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center flex-shrink-0"><Users className="w-5 h-5 text-primary" /></div>
                       <div className="flex-1 overflow-hidden">
-                        <p className="font-semibold text-foreground truncate">{group.name}</p>
+                        <p className="font-semibold truncate">{group.name}</p>
                         <p className="text-xs text-muted-foreground">{group.memberCount} member{group.memberCount !== 1 ? "s" : ""}</p>
                       </div>
                     </button>
@@ -651,21 +607,15 @@ export default function Messages() {
                       </div>
                       <div className="flex-1"><h3 className="font-semibold">{activeUser?.displayName || "Unknown"}</h3></div>
                       {callStatus === "idle" && (
-                        <button
-                          data-testid="button-start-voice-call"
-                          onClick={handleStartCall}
-                          className="p-2 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/30 transition-colors"
-                          title="Voice call"
-                        >
+                        <button data-testid="button-start-voice-call" onClick={handleStartCall}
+                          className="p-2 rounded-full bg-primary/10 hover:bg-primary/20 border border-primary/30 transition-colors" title="Voice call">
                           <Phone className="w-4 h-4 text-primary" />
                         </button>
                       )}
                     </>
                   ) : (
                     <>
-                      <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
-                        <Users className="w-5 h-5 text-primary" />
-                      </div>
+                      <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center"><Users className="w-5 h-5 text-primary" /></div>
                       <div className="flex-1">
                         <h3 className="font-semibold">{activeGroup?.name || "Group"}</h3>
                         <p className="text-xs text-muted-foreground">{activeGroup?.memberCount} members</p>
@@ -728,14 +678,12 @@ export default function Messages() {
                 )}
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-black/40 relative">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-black/40">
                   {(viewMode === "dm" ? msgsLoading : groupMsgsLoading) ? (
                     <LoadingSpinner />
                   ) : viewMode === "dm" ? (
                     messages?.length === 0 ? (
-                      <div className="h-full flex items-center justify-center text-muted-foreground italic text-sm">
-                        Start a discussion about numismatics...
-                      </div>
+                      <div className="h-full flex items-center justify-center text-muted-foreground italic text-sm">Start a discussion about numismatics...</div>
                     ) : (
                       messages?.map((msg: any) => {
                         const isMe = msg.senderId === user.id;
@@ -757,9 +705,7 @@ export default function Messages() {
                     )
                   ) : (
                     groupMsgs?.length === 0 ? (
-                      <div className="h-full flex items-center justify-center text-muted-foreground italic text-sm">
-                        Start the conversation in this group...
-                      </div>
+                      <div className="h-full flex items-center justify-center text-muted-foreground italic text-sm">Start the conversation in this group...</div>
                     ) : (
                       groupMsgs?.map((msg: any) => {
                         const isMe = msg.senderId === user.id;
@@ -791,12 +737,8 @@ export default function Messages() {
                     <div className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-full px-5 py-3">
                       <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                       <span className="text-red-400 text-sm font-medium flex-1">Recording... {formatDuration(recordingSeconds)}</span>
-                      <button onClick={cancelRecording} className="text-muted-foreground hover:text-foreground p-1" data-testid="button-cancel-recording">
-                        <X className="w-4 h-4" />
-                      </button>
-                      <button onClick={stopRecordingAndSend} className="w-9 h-9 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors" data-testid="button-stop-recording">
-                        <Send className="w-4 h-4" />
-                      </button>
+                      <button onClick={cancelRecording} className="text-muted-foreground hover:text-foreground p-1" data-testid="button-cancel-recording"><X className="w-4 h-4" /></button>
+                      <button onClick={stopRecordingAndSend} className="w-9 h-9 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors" data-testid="button-stop-recording"><Send className="w-4 h-4" /></button>
                     </div>
                   ) : (
                     <form onSubmit={handleSend} className="relative flex gap-2">
@@ -810,23 +752,15 @@ export default function Messages() {
                         data-testid="input-message"
                       />
                       {viewMode === "dm" && !msgInput.trim() && (
-                        <button
-                          type="button"
-                          onClick={startRecording}
-                          disabled={isUploadingAudio}
+                        <button type="button" onClick={startRecording} disabled={isUploadingAudio}
                           className="w-12 h-12 rounded-full bg-card border border-border/50 text-muted-foreground flex items-center justify-center flex-shrink-0 hover:border-primary/50 hover:text-primary transition-colors disabled:opacity-50"
-                          data-testid="button-voice-note"
-                          title="Hold to record voice note"
-                        >
+                          data-testid="button-voice-note" title="Record voice note">
                           {isUploadingAudio ? <LoadingSpinner className="scale-50" /> : <Mic className="w-5 h-5" />}
                         </button>
                       )}
-                      <button
-                        type="submit"
-                        disabled={!msgInput.trim() || sendMessage.isPending || sendGroupMsg.isPending}
+                      <button type="submit" disabled={!msgInput.trim() || sendMessage.isPending || sendGroupMsg.isPending}
                         className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center flex-shrink-0 disabled:opacity-50 hover:bg-primary/90 transition-colors"
-                        data-testid="button-send-message"
-                      >
+                        data-testid="button-send-message">
                         <Send className="w-5 h-5 -ml-1" />
                       </button>
                     </form>
@@ -840,7 +774,6 @@ export default function Messages() {
               </div>
             )}
           </div>
-
         </div>
       </div>
     </Shell>
@@ -855,11 +788,7 @@ function VoiceNotePlayer({ src, isMe }: { src: string; isMe: boolean }) {
 
   const toggle = () => {
     if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
+    if (isPlaying) { audioRef.current.pause(); } else { audioRef.current.play(); }
     setIsPlaying(!isPlaying);
   };
 
@@ -867,22 +796,15 @@ function VoiceNotePlayer({ src, isMe }: { src: string; isMe: boolean }) {
 
   return (
     <div className="flex items-center gap-3 min-w-[180px]">
-      <audio
-        ref={audioRef}
-        src={src}
+      <audio ref={audioRef} src={src}
         onLoadedMetadata={e => setDuration((e.target as HTMLAudioElement).duration)}
         onTimeUpdate={e => setCurrentTime((e.target as HTMLAudioElement).currentTime)}
-        onEnded={() => setIsPlaying(false)}
-      />
-      <button
-        onClick={toggle}
+        onEnded={() => setIsPlaying(false)} />
+      <button onClick={toggle}
         className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${isMe ? "bg-primary-foreground/20 hover:bg-primary-foreground/30 text-primary-foreground" : "bg-primary/20 hover:bg-primary/30 text-primary"}`}
-        data-testid="button-play-voice-note"
-      >
+        data-testid="button-play-voice-note">
         {isPlaying ? (
-          <span className="flex gap-0.5">
-            <span className="w-0.5 h-4 bg-current rounded" /><span className="w-0.5 h-4 bg-current rounded" />
-          </span>
+          <span className="flex gap-0.5"><span className="w-0.5 h-4 bg-current rounded" /><span className="w-0.5 h-4 bg-current rounded" /></span>
         ) : (
           <span className="border-l-[14px] border-l-current border-y-[8px] border-y-transparent ml-0.5" />
         )}
@@ -891,9 +813,7 @@ function VoiceNotePlayer({ src, isMe }: { src: string; isMe: boolean }) {
         <div className="w-full h-1 rounded-full bg-current/20 overflow-hidden">
           <div className="h-full bg-current/60 rounded-full transition-all" style={{ width: duration > 0 ? `${(currentTime / duration) * 100}%` : "0%" }} />
         </div>
-        <p className="text-[10px] opacity-70">
-          {isPlaying ? formatTime(currentTime) : formatTime(duration || 0)}
-        </p>
+        <p className="text-[10px] opacity-70">{isPlaying ? formatTime(currentTime) : formatTime(duration || 0)}</p>
       </div>
       <Mic className="w-3.5 h-3.5 opacity-50 flex-shrink-0" />
     </div>

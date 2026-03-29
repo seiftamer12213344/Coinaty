@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import type { InsertCoin } from "@shared/schema";
 import { z } from "zod";
+import { onWS } from "@/lib/websocket";
 
 // Fetch all coins (Feed)
 export function useCoins(filters?: { category?: string; userId?: string }) {
@@ -111,6 +113,17 @@ export function useToggleLike() {
 
 // Get users who liked a coin
 export function useCoinLikes(id: number) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    return onWS("like:update", (data) => {
+      if (data.coinId === id) {
+        queryClient.invalidateQueries({ queryKey: [api.coins.getLikes.path, id] });
+        queryClient.invalidateQueries({ queryKey: [api.coins.list.path] });
+      }
+    });
+  }, [id, queryClient]);
+
   return useQuery({
     queryKey: [api.coins.getLikes.path, id],
     queryFn: async () => {

@@ -12,6 +12,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { randomUUID } from "crypto";
 import fs from "fs";
+import { sendToUser, broadcast } from "./websocket";
 
 function stripPassword<T extends Record<string, any>>(obj: T): Omit<T, 'password'> {
   const { password, ...rest } = obj;
@@ -113,7 +114,9 @@ export async function registerRoutes(
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(404).json({ message: "Invalid ID" });
       const result = await storage.toggleLike(id, req.user.claims.sub);
-      res.status(200).json({ likesCount: result.count, likedByMe: result.liked });
+      const payload = { likesCount: result.count, likedByMe: result.liked };
+      res.status(200).json(payload);
+      broadcast({ type: "like:update", coinId: id, count: result.count, liked: result.liked, actorId: req.user.claims.sub });
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -238,6 +241,7 @@ export async function registerRoutes(
       const input = api.messages.send.input.parse(req.body);
       const message = await storage.sendMessage(req.user.claims.sub, req.params.userId, input.content, input.audioUrl);
       res.status(201).json(message);
+      sendToUser(req.params.userId, { type: "message:new", message });
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({
@@ -458,6 +462,7 @@ export async function registerRoutes(
       if (!receiverId) return res.status(400).json({ message: "receiverId required" });
       const session = await storage.createCall(req.user.claims.sub, receiverId);
       res.status(201).json(session);
+      sendToUser(receiverId, { type: "call:incoming", callId: session.id, callerId: req.user.claims.sub });
     } catch { res.status(500).json({ message: "Internal server error" }); }
   });
 
@@ -483,6 +488,9 @@ export async function registerRoutes(
       const session = await storage.updateCall(id, { status, sdpOffer, sdpAnswer });
       if (!session) return res.status(404).json({ message: "Not found" });
       res.json(session);
+      const event = { type: "call:update", callId: id, status: session.status, sdpOffer: session.sdpOffer, sdpAnswer: session.sdpAnswer };
+      sendToUser(session.callerId, event);
+      sendToUser(session.receiverId, event);
     } catch { res.status(500).json({ message: "Internal server error" }); }
   });
 
@@ -494,6 +502,11 @@ export async function registerRoutes(
       if (!Array.isArray(candidates)) return res.status(400).json({ message: "candidates must be array" });
       await storage.addCandidates(id, role, candidates);
       res.json({ ok: true });
+      const session = await storage.getCall(id);
+      if (session) {
+        const notifyId = role === "caller" ? session.receiverId : session.callerId;
+        sendToUser(notifyId, { type: "call:candidates", callId: id, role, candidates });
+      }
     } catch { res.status(500).json({ message: "Internal server error" }); }
   });
 

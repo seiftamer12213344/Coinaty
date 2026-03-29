@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import type { User } from "@shared/schema";
+import { connectWS, disconnectWS } from "@/lib/websocket";
 
 async function fetchUser(): Promise<User | null> {
   const response = await fetch("/api/auth/user", {
@@ -35,6 +37,14 @@ export function useAuth() {
     retry: false,
     staleTime: 1000 * 60 * 5,
   });
+
+  useEffect(() => {
+    if (user?.id) {
+      connectWS(user.id);
+    } else if (user === null) {
+      disconnectWS();
+    }
+  }, [user?.id]);
 
   const logoutMutation = useMutation({
     mutationFn: logout,

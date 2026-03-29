@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupAuth } from "./replit_integrations/auth";
+import { setupWebSocket } from "./websocket";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -88,6 +89,7 @@ app.use((req, res, next) => {
 
 (async () => {
   await setupAuth(app);
+  setupWebSocket(httpServer);
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
