@@ -147,7 +147,7 @@ export const api = {
     send: {
       method: "POST" as const,
       path: "/api/messages/:userId" as const,
-      input: z.object({ content: z.string() }),
+      input: z.object({ content: z.string(), audioUrl: z.string().optional() }),
       responses: {
         201: z.custom<typeof messages.$inferSelect>(),
         400: errorSchemas.validation,

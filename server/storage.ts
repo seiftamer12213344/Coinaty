@@ -1,4 +1,4 @@
-import { coins, coinLikes, comments, messages, users as usersTable, watchlistItems, groups, groupMembers, groupMessages, groupInvitations, type User, type Coin, type CoinLike, type Comment, type Message, type WatchlistItem, type Group, type GroupMember, type GroupMessage, type GroupInvitation, type InsertCoin } from "@shared/schema";
+import { coins, coinLikes, comments, messages, users as usersTable, watchlistItems, groups, groupMembers, groupMessages, groupInvitations, callSessions, type User, type Coin, type CoinLike, type Comment, type Message, type WatchlistItem, type Group, type GroupMember, type GroupMessage, type GroupInvitation, type InsertCoin, type CallSession } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, inArray, sql, ilike } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth";
@@ -33,7 +33,14 @@ export interface IStorage extends IAuthStorage {
   // Messages
   getConversations(userId: string): Promise<User[]>;
   getMessages(userId1: string, userId2: string): Promise<Message[]>;
-  sendMessage(senderId: string, receiverId: string, content: string): Promise<Message>;
+  sendMessage(senderId: string, receiverId: string, content: string, audioUrl?: string): Promise<Message>;
+
+  // Calls
+  createCall(callerId: string, receiverId: string): Promise<CallSession>;
+  getCall(id: number): Promise<CallSession | undefined>;
+  getIncomingCall(userId: string): Promise<CallSession | undefined>;
+  updateCall(id: number, updates: { status?: string; sdpOffer?: string; sdpAnswer?: string }): Promise<CallSession | undefined>;
+  addCandidates(id: number, role: "caller" | "receiver", candidates: string[]): Promise<void>;
 
   // Watchlist
   getWatchlist(userId: string): Promise<Coin[]>;
@@ -201,13 +208,58 @@ export class DatabaseStorage implements IStorage {
       .orderBy(messages.createdAt);
   }
 
-  async sendMessage(senderId: string, receiverId: string, content: string): Promise<Message> {
+  async sendMessage(senderId: string, receiverId: string, content: string, audioUrl?: string): Promise<Message> {
     const [msg] = await db.insert(messages).values({
       senderId,
       receiverId,
-      content
+      content,
+      ...(audioUrl ? { audioUrl } : {}),
     }).returning();
     return msg;
+  }
+
+  async createCall(callerId: string, receiverId: string): Promise<CallSession> {
+    await db.update(callSessions)
+      .set({ status: "ended" })
+      .where(and(
+        or(eq(callSessions.callerId, callerId), eq(callSessions.receiverId, callerId)),
+        eq(callSessions.status, "pending")
+      ));
+    const [session] = await db.insert(callSessions).values({ callerId, receiverId }).returning();
+    return session;
+  }
+
+  async getCall(id: number): Promise<CallSession | undefined> {
+    const [session] = await db.select().from(callSessions).where(eq(callSessions.id, id));
+    return session;
+  }
+
+  async getIncomingCall(userId: string): Promise<CallSession | undefined> {
+    const [session] = await db.select().from(callSessions)
+      .where(and(
+        eq(callSessions.receiverId, userId),
+        or(eq(callSessions.status, "pending"), eq(callSessions.status, "active"))
+      ))
+      .orderBy(desc(callSessions.createdAt))
+      .limit(1);
+    return session;
+  }
+
+  async updateCall(id: number, updates: { status?: string; sdpOffer?: string; sdpAnswer?: string }): Promise<CallSession | undefined> {
+    const [session] = await db.update(callSessions).set(updates).where(eq(callSessions.id, id)).returning();
+    return session;
+  }
+
+  async addCandidates(id: number, role: "caller" | "receiver", candidates: string[]): Promise<void> {
+    const [session] = await db.select().from(callSessions).where(eq(callSessions.id, id));
+    if (!session) return;
+    const existing = (role === "caller" ? session.callerCandidates : session.receiverCandidates) || [];
+    const merged = [...existing, ...candidates];
+    if (role === "caller") {
+      await db.update(callSessions).set({ callerCandidates: merged }).where(eq(callSessions.id, id));
+    } else {
+      await db.update(callSessions).set({ receiverCandidates: merged }).where(eq(callSessions.id, id));
+    }
   }
 
   async getWatchlist(userId: string): Promise<Coin[]> {

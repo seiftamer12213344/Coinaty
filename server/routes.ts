@@ -41,6 +41,21 @@ const upload = multer({
   },
 });
 
+const audioUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || ".webm";
+      cb(null, `${randomUUID()}${ext}`);
+    },
+  }),
+  limits: { fileSize: 16 * 1024 * 1024 }, // 16 MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("audio/")) cb(null, true);
+    else cb(new Error("Only audio files are allowed"));
+  },
+});
+
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
@@ -221,7 +236,7 @@ export async function registerRoutes(
   app.post(api.messages.send.path, isAuthenticated, async (req: any, res) => {
     try {
       const input = api.messages.send.input.parse(req.body);
-      const message = await storage.sendMessage(req.user.claims.sub, req.params.userId, input.content);
+      const message = await storage.sendMessage(req.user.claims.sub, req.params.userId, input.content, input.audioUrl);
       res.status(201).json(message);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -427,6 +442,59 @@ export async function registerRoutes(
     if (!req.file) return res.status(400).json({ message: "No image file provided" });
     const url = `/uploads/${req.file.filename}`;
     res.json({ url });
+  });
+
+  // Audio upload endpoint (for voice notes)
+  app.post("/api/upload/audio", isAuthenticated, audioUpload.single("audio"), (req: any, res) => {
+    if (!req.file) return res.status(400).json({ message: "No audio file provided" });
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
+  });
+
+  // Call routes (WebRTC signaling)
+  app.post("/api/calls", isAuthenticated, async (req: any, res) => {
+    try {
+      const { receiverId } = req.body;
+      if (!receiverId) return res.status(400).json({ message: "receiverId required" });
+      const session = await storage.createCall(req.user.claims.sub, receiverId);
+      res.status(201).json(session);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.get("/api/calls/incoming", isAuthenticated, async (req: any, res) => {
+    try {
+      const session = await storage.getIncomingCall(req.user.claims.sub);
+      res.json(session || null);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.get("/api/calls/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const session = await storage.getCall(parseInt(req.params.id));
+      if (!session) return res.status(404).json({ message: "Not found" });
+      res.json(session);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.patch("/api/calls/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status, sdpOffer, sdpAnswer } = req.body;
+      const session = await storage.updateCall(id, { status, sdpOffer, sdpAnswer });
+      if (!session) return res.status(404).json({ message: "Not found" });
+      res.json(session);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.post("/api/calls/:id/candidates/:role", isAuthenticated, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const role = req.params.role as "caller" | "receiver";
+      const { candidates } = req.body;
+      if (!Array.isArray(candidates)) return res.status(400).json({ message: "candidates must be array" });
+      await storage.addCandidates(id, role, candidates);
+      res.json({ ok: true });
+    } catch { res.status(500).json({ message: "Internal server error" }); }
   });
 
   // Watchlist routes (auth required)

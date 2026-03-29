@@ -59,7 +59,20 @@ export const messages = pgTable("messages", {
   id: serial("id").primaryKey(),
   senderId: varchar("sender_id").notNull(),
   receiverId: varchar("receiver_id").notNull(),
-  content: text("content").notNull(),
+  content: text("content").notNull().default(""),
+  audioUrl: text("audio_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const callSessions = pgTable("call_sessions", {
+  id: serial("id").primaryKey(),
+  callerId: varchar("caller_id").notNull(),
+  receiverId: varchar("receiver_id").notNull(),
+  status: text("status").notNull().default("pending"),
+  sdpOffer: text("sdp_offer"),
+  sdpAnswer: text("sdp_answer"),
+  callerCandidates: jsonb("caller_candidates").$type<string[]>().default([]),
+  receiverCandidates: jsonb("receiver_candidates").$type<string[]>().default([]),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -186,3 +199,4 @@ export type GroupMessage = typeof groupMessages.$inferSelect;
 export type GroupInvitation = typeof groupInvitations.$inferSelect;
 
 export type InsertCoin = z.infer<typeof insertCoinSchema>;
+export type CallSession = typeof callSessions.$inferSelect;
