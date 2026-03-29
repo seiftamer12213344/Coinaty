@@ -429,6 +429,95 @@ export async function registerRoutes(
     res.json({ url });
   });
 
+  // Vault Folder routes (auth required)
+  app.get("/api/vault/folders", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const folders = await storage.getFolders(userId);
+      res.json(folders);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.get("/api/vault/folders/public/:userId", async (req: any, res) => {
+    try {
+      const folders = await storage.getFolders(req.params.userId);
+      res.json(folders);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.post("/api/vault/folders", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { name } = req.body;
+      if (!name || typeof name !== "string" || !name.trim())
+        return res.status(400).json({ message: "Folder name is required" });
+      const folder = await storage.createFolder(userId, name.trim());
+      res.status(201).json(folder);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.patch("/api/vault/folders/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const { name } = req.body;
+      if (!name || typeof name !== "string" || !name.trim())
+        return res.status(400).json({ message: "Folder name is required" });
+      const folder = await storage.renameFolder(id, userId, name.trim());
+      if (!folder) return res.status(404).json({ message: "Folder not found" });
+      res.json(folder);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.delete("/api/vault/folders/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const id = parseInt(req.params.id);
+      const deleted = await storage.deleteFolder(id, userId);
+      if (!deleted) return res.status(404).json({ message: "Folder not found" });
+      res.json({ deleted: true });
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.get("/api/vault/folders/:id/coins", isAuthenticated, async (req: any, res) => {
+    try {
+      const folderId = parseInt(req.params.id);
+      const coins = await storage.getFolderCoins(folderId);
+      res.json(coins);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.post("/api/vault/folders/:id/coins/:coinId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const folderId = parseInt(req.params.id);
+      const coinId = parseInt(req.params.coinId);
+      const ok = await storage.addCoinToFolder(folderId, coinId, userId);
+      if (!ok) return res.status(404).json({ message: "Folder not found" });
+      res.json({ added: true });
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.delete("/api/vault/folders/:id/coins/:coinId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const folderId = parseInt(req.params.id);
+      const coinId = parseInt(req.params.coinId);
+      const ok = await storage.removeCoinFromFolder(folderId, coinId, userId);
+      if (!ok) return res.status(404).json({ message: "Folder not found" });
+      res.json({ removed: true });
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.get("/api/vault/coins/:coinId/folders", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const coinId = parseInt(req.params.coinId);
+      const folders = await storage.getCoinFolders(coinId, userId);
+      res.json(folders);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
   // Watchlist routes (auth required)
   app.get("/api/watchlist", isAuthenticated, async (req: any, res) => {
     try {

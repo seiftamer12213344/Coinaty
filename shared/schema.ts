@@ -155,6 +155,31 @@ export const groupInvitationsRelations = relations(groupInvitations, ({ one }) =
   invitee: one(users, { fields: [groupInvitations.inviteeId], references: [users.id] }),
 }));
 
+// Vault Folders
+export const vaultFolders = pgTable("vault_folders", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const vaultFolderCoins = pgTable("vault_folder_coins", {
+  id: serial("id").primaryKey(),
+  folderId: integer("folder_id").notNull(),
+  coinId: integer("coin_id").notNull(),
+  addedAt: timestamp("added_at").defaultNow(),
+});
+
+export const vaultFoldersRelations = relations(vaultFolders, ({ one, many }) => ({
+  user: one(users, { fields: [vaultFolders.userId], references: [users.id] }),
+  folderCoins: many(vaultFolderCoins),
+}));
+
+export const vaultFolderCoinsRelations = relations(vaultFolderCoins, ({ one }) => ({
+  folder: one(vaultFolders, { fields: [vaultFolderCoins.folderId], references: [vaultFolders.id] }),
+  coin: one(coins, { fields: [vaultFolderCoins.coinId], references: [coins.id] }),
+}));
+
 // Zod Schemas
 export const insertCoinSchema = createInsertSchema(coins).omit({ 
   id: true, createdAt: true, userId: true 
@@ -186,3 +211,7 @@ export type GroupMessage = typeof groupMessages.$inferSelect;
 export type GroupInvitation = typeof groupInvitations.$inferSelect;
 
 export type InsertCoin = z.infer<typeof insertCoinSchema>;
+export type VaultFolder = typeof vaultFolders.$inferSelect;
+export type VaultFolderCoin = typeof vaultFolderCoins.$inferSelect;
+export const insertVaultFolderSchema = createInsertSchema(vaultFolders).omit({ id: true, createdAt: true, userId: true });
+export type InsertVaultFolder = z.infer<typeof insertVaultFolderSchema>;

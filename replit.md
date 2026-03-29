@@ -8,6 +8,7 @@ Coinaty is a social network for coin collectors (numismatists). It allows users 
 - Coin posting with photo, title, description, category, and optional metal type
 - Social feed (like a gallery/news feed), likes with modal showing who liked, and comments
 - User profiles with rank/points gamification system (Novice → Numismatist → Master)
+- **Vault folders** — users can create named folders/collections within their vault to organize coins; click a folder to drill in, rename or delete via context menu, and a "Folders" hover button on each coin card to assign it to one or more folders
 - Direct messaging between users
 - Numista integration for looking up coins by name
 - Group chats with invitation system (create groups, invite via DM page, accept/decline)
