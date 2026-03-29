@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useUserProfile, useUpdateProfile } from "@/hooks/use-users";
@@ -7,7 +7,7 @@ import { useWatchlist } from "@/hooks/use-watchlist";
 import { Shell } from "@/components/layout/Shell";
 import { CoinCard } from "@/components/CoinCard";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { Shield, MapPin, CalendarDays, Edit3, MessageSquare, Bookmark, PlusCircle } from "lucide-react";
+import { Shield, MapPin, CalendarDays, Edit3, MessageSquare, Bookmark, PlusCircle, Camera, Loader2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,8 @@ export default function Profile() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState("");
   const [editPhotoUrl, setEditPhotoUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const openEditModal = () => {
     setEditDisplayName(profile?.displayName || "");
@@ -257,26 +259,79 @@ export default function Profile() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="photoUrl" className="text-sm text-muted-foreground uppercase tracking-wider">Profile Photo URL</Label>
-              <Input
-                id="photoUrl"
-                data-testid="input-photo-url"
-                value={editPhotoUrl}
-                onChange={e => setEditPhotoUrl(e.target.value)}
-                placeholder="https://example.com/photo.jpg"
-                className="bg-black/30 border-border focus:border-primary"
-              />
-              {editPhotoUrl && (
-                <div className="mt-2 flex items-center gap-3">
-                  <img
-                    src={editPhotoUrl}
-                    alt="Preview"
-                    className="w-12 h-12 rounded-full object-cover border border-primary/30"
-                    onError={e => (e.currentTarget.style.display = "none")}
-                  />
-                  <span className="text-xs text-muted-foreground">Preview</span>
+              <Label className="text-sm text-muted-foreground uppercase tracking-wider">Profile Photo</Label>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <div className="w-20 h-20 rounded-full overflow-hidden bg-muted border-2 border-border">
+                    {editPhotoUrl ? (
+                      <img src={editPhotoUrl} alt="Preview" className="w-full h-full object-cover" onError={e => (e.currentTarget.style.display = "none")} />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center font-serif text-2xl bg-black/80 text-primary">
+                        {(editDisplayName || "C")[0].toUpperCase()}
+                      </div>
+                    )}
+                  </div>
+                  {editPhotoUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setEditPhotoUrl("")}
+                      className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
-              )}
+                <div className="flex-1 space-y-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    data-testid="button-upload-photo"
+                    className="w-full border-border hover:border-primary/50"
+                    disabled={uploading}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    {uploading ? (
+                      <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Uploading...</>
+                    ) : (
+                      <><Camera className="w-4 h-4 mr-2" /> Upload Photo</>
+                    )}
+                  </Button>
+                  <p className="text-xs text-muted-foreground text-center">JPG, PNG up to 8 MB</p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  data-testid="input-photo-file"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (!file.type.startsWith("image/")) {
+                      toast({ title: "Invalid file", description: "Please select an image file.", variant: "destructive" });
+                      return;
+                    }
+                    if (file.size > 8 * 1024 * 1024) {
+                      toast({ title: "File too large", description: "Photo must be under 8 MB.", variant: "destructive" });
+                      return;
+                    }
+                    setUploading(true);
+                    try {
+                      const form = new FormData();
+                      form.append("image", file);
+                      const res = await fetch("/api/upload", { method: "POST", body: form, credentials: "include" });
+                      if (!res.ok) throw new Error();
+                      const { url } = await res.json();
+                      setEditPhotoUrl(url);
+                    } catch {
+                      toast({ title: "Upload failed", description: "Please try again.", variant: "destructive" });
+                    } finally {
+                      setUploading(false);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+              </div>
             </div>
             <div className="flex gap-3 pt-2">
               <Button
