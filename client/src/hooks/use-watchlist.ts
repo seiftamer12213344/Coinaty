@@ -2,9 +2,16 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import type { Coin } from "@shared/schema";
 
-export function useWatchlist() {
+export function useWatchlist(enabled = true) {
   return useQuery<Coin[]>({
     queryKey: ["/api/watchlist"],
+    queryFn: async () => {
+      const res = await fetch("/api/watchlist", { credentials: "include" });
+      if (res.status === 401) return [];
+      if (!res.ok) throw new Error("Failed to fetch watchlist");
+      return res.json();
+    },
+    enabled,
   });
 }
 

@@ -44,8 +44,14 @@ export function registerAuthRoutes(app: Express): void {
       }).returning();
 
       (req.session as any).localUser = { userId: newUser.id };
-      const { password, ...safeUser } = newUser;
-      res.status(201).json(safeUser);
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ message: "Registration failed" });
+        }
+        const { password, ...safeUser } = newUser;
+        res.status(201).json(safeUser);
+      });
     } catch (error) {
       console.error("Error registering user:", error);
       res.status(500).json({ message: "Registration failed" });
@@ -70,8 +76,14 @@ export function registerAuthRoutes(app: Express): void {
       }
 
       (req.session as any).localUser = { userId: user.id };
-      const { password, ...safeUser } = user;
-      res.json(safeUser);
+      req.session.save((err) => {
+        if (err) {
+          console.error("Session save error:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
+        const { password, ...safeUser } = user;
+        res.json(safeUser);
+      });
     } catch (error) {
       console.error("Error logging in:", error);
       res.status(500).json({ message: "Login failed" });

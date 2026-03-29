@@ -25,7 +25,7 @@ export default function Profile() {
 
   const { data: profile, isLoading: profileLoading } = useUserProfile(targetId);
   const { data: userCoins, isLoading: coinsLoading } = useCoins({ userId: targetId });
-  const { data: watchlistCoins, isLoading: watchlistLoading } = useWatchlist();
+  const { data: watchlistCoins, isLoading: watchlistLoading } = useWatchlist(isOwnProfile);
   const updateProfile = useUpdateProfile();
 
   const [activeTab, setActiveTab] = useState<"vault" | "wishlist">("vault");
