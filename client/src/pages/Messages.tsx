@@ -323,10 +323,20 @@ export default function Messages() {
   }, []);
 
   // Voice note recording
+  const mimeTypeRef = useRef<string>("audio/webm");
+
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      // Pick the best supported MIME type
+      const mimeType = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/mp4",
+      ].find(t => MediaRecorder.isTypeSupported(t)) || "";
+      mimeTypeRef.current = mimeType || "audio/webm";
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       audioChunksRef.current = [];
       mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
       mr.start(100);
@@ -346,24 +356,41 @@ export default function Messages() {
     setIsUploadingAudio(true);
 
     const mr = mediaRecorderRef.current;
-    mr.stream.getTracks().forEach(t => t.stop());
 
-    await new Promise<void>(resolve => { mr.onstop = () => resolve(); mr.stop(); });
+    // Stop tracks INSIDE onstop so MediaRecorder flushes all audio data first
+    await new Promise<void>(resolve => {
+      mr.onstop = () => {
+        mr.stream.getTracks().forEach(t => t.stop());
+        resolve();
+      };
+      mr.stop();
+    });
 
-    const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-    if (blob.size < 1000) { setIsUploadingAudio(false); return; }
+    const mimeType = mimeTypeRef.current;
+    const blob = new Blob(audioChunksRef.current, { type: mimeType });
+    if (blob.size < 500) {
+      setIsUploadingAudio(false);
+      mediaRecorderRef.current = null;
+      audioChunksRef.current = [];
+      toast({ title: "Recording too short", variant: "destructive" });
+      return;
+    }
 
+    const ext = mimeType.includes("ogg") ? ".ogg" : mimeType.includes("mp4") ? ".mp4" : ".webm";
     try {
       const form = new FormData();
-      form.append("audio", blob, "voice-note.webm");
+      form.append("audio", blob, `voice-note${ext}`);
       const res = await fetch("/api/upload/audio", { method: "POST", body: form, credentials: "include" });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Upload failed");
+      }
       const { url } = await res.json();
       if (activeUserId) {
         sendMessage.mutate({ userId: activeUserId, content: "", audioUrl: url });
       }
-    } catch {
-      toast({ title: "Failed to send voice note", variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: "Failed to send voice note", description: err.message, variant: "destructive" });
     } finally {
       setIsUploadingAudio(false);
       mediaRecorderRef.current = null;
@@ -374,8 +401,9 @@ export default function Messages() {
   const cancelRecording = useCallback(() => {
     if (!mediaRecorderRef.current) return;
     if (recordingTimerRef.current) { clearInterval(recordingTimerRef.current); recordingTimerRef.current = null; }
-    mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
-    mediaRecorderRef.current.stop();
+    const mr = mediaRecorderRef.current;
+    mr.onstop = () => mr.stream.getTracks().forEach(t => t.stop());
+    mr.stop();
     mediaRecorderRef.current = null;
     audioChunksRef.current = [];
     setIsRecording(false);

@@ -4,6 +4,14 @@ import { api, buildUrl } from "@shared/routes";
 import { onWS } from "@/lib/websocket";
 
 export function useConversations() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    return onWS("message:new", () => {
+      queryClient.invalidateQueries({ queryKey: [api.messages.getConversations.path] });
+    });
+  }, [queryClient]);
+
   return useQuery({
     queryKey: [api.messages.getConversations.path],
     queryFn: async () => {
