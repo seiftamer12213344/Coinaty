@@ -1,4 +1,4 @@
-import { coins, coinLikes, comments, messages, users as usersTable, watchlistItems, groups, groupMembers, groupMessages, groupInvitations, callSessions, type User, type Coin, type CoinLike, type Comment, type Message, type WatchlistItem, type Group, type GroupMember, type GroupMessage, type GroupInvitation, type InsertCoin, type CallSession } from "@shared/schema";
+import { coins, coinLikes, comments, messages, users as usersTable, watchlistItems, groups, groupMembers, groupMessages, groupInvitations, callSessions, marketPrices, type User, type Coin, type CoinLike, type Comment, type Message, type WatchlistItem, type Group, type GroupMember, type GroupMessage, type GroupInvitation, type InsertCoin, type CallSession, type MarketPrice } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, inArray, sql, ilike } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth";
@@ -46,6 +46,10 @@ export interface IStorage extends IAuthStorage {
   getWatchlist(userId: string): Promise<Coin[]>;
   isInWatchlist(userId: string, coinId: number): Promise<boolean>;
   toggleWatchlist(userId: string, coinId: number): Promise<{ added: boolean }>;
+
+  // Market Prices
+  getMarketPrice(numistaId: string): Promise<MarketPrice | undefined>;
+  upsertMarketPrice(numistaId: string, coinTitle: string, listings: { price: number; currency: string; title: string; dateSold: string }[]): Promise<MarketPrice>;
 
   // Groups
   createGroup(name: string, createdBy: string): Promise<Group>;
@@ -387,6 +391,31 @@ export class DatabaseStorage implements IStorage {
   async removeGroupMember(groupId: number, userId: string): Promise<void> {
     await db.delete(groupMembers)
       .where(and(eq(groupMembers.groupId, groupId), eq(groupMembers.userId, userId)));
+  }
+
+  async getMarketPrice(numistaId: string): Promise<MarketPrice | undefined> {
+    const [row] = await db.select().from(marketPrices).where(eq(marketPrices.numistaId, numistaId));
+    return row;
+  }
+
+  async upsertMarketPrice(
+    numistaId: string,
+    coinTitle: string,
+    listings: { price: number; currency: string; title: string; dateSold: string }[]
+  ): Promise<MarketPrice> {
+    const prices = listings.map(l => l.price).filter(p => p > 0);
+    const avg = prices.length > 0 ? (prices.reduce((a, b) => a + b, 0) / prices.length).toFixed(2) : null;
+    const currency = listings[0]?.currency ?? "USD";
+
+    const [row] = await db
+      .insert(marketPrices)
+      .values({ numistaId, coinTitle, listings, avgPrice: avg, currency, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: marketPrices.numistaId,
+        set: { coinTitle, listings, avgPrice: avg, currency, updatedAt: new Date() },
+      })
+      .returning();
+    return row;
   }
 
 }

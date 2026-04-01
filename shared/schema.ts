@@ -168,6 +168,19 @@ export const groupInvitationsRelations = relations(groupInvitations, ({ one }) =
   invitee: one(users, { fields: [groupInvitations.inviteeId], references: [users.id] }),
 }));
 
+// Market Prices — eBay scraped sold listing cache
+export const marketPrices = pgTable("market_prices", {
+  id: serial("id").primaryKey(),
+  numistaId: text("numista_id").notNull().unique(),
+  coinTitle: text("coin_title").notNull(),
+  listings: jsonb("listings").$type<{ price: number; currency: string; title: string; dateSold: string }[]>().default([]),
+  avgPrice: text("avg_price"),
+  currency: text("currency").default("USD"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type MarketPrice = typeof marketPrices.$inferSelect;
+
 // Zod Schemas
 export const insertCoinSchema = createInsertSchema(coins).omit({ 
   id: true, createdAt: true, userId: true 

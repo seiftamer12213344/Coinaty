@@ -3,7 +3,8 @@ import { useCoin, useComments, useCreateComment, useToggleLike, useCoinLikes } f
 import { useUserProfile } from "@/hooks/use-users";
 import { Shell } from "@/components/layout/Shell";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { ArrowLeft, ExternalLink, Heart, Send, MessageSquare } from "lucide-react";
+import { ArrowLeft, Heart, Send, MessageSquare } from "lucide-react";
+import MarketValue from "@/components/MarketValue";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
@@ -101,10 +102,9 @@ export default function CoinDetails() {
                 href={`https://en.numista.com/catalogue/index.php?e=&r=${encodeURIComponent(coin.title)}`}
                 target="_blank" 
                 rel="noreferrer"
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-semibold shadow-[0_0_15px_rgba(212,175,55,0.2)] hover:shadow-[0_0_25px_rgba(212,175,55,0.4)] transition-shadow"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-semibold shadow-[0_0_15px_rgba(212,175,55,0.2)] hover:shadow-[0_0_25px_rgba(212,175,55,0.4)] transition-shadow text-sm"
               >
-                Market Value
-                <ExternalLink className="w-4 h-4" />
+                Numista
               </a>
             </div>
           </div>
@@ -152,6 +152,11 @@ export default function CoinDetails() {
                 </Link>
               </div>
             </div>
+
+            {/* Market Value */}
+            {coin.numistaId && (
+              <MarketValue numistaId={coin.numistaId} coinTitle={coin.title} />
+            )}
 
             {/* Comments Section */}
             <div className="flex-1 flex flex-col bg-card border border-border/50 rounded-3xl overflow-hidden max-h-[600px]">

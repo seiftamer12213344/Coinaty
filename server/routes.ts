@@ -6,6 +6,7 @@ import { isAuthenticated } from "./replit_integrations/auth/replitAuth";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { searchNumista, getNumistaCoin } from "./numista";
+import { scrapeEbaySoldListings } from "./scraper";
 import OpenAI from "openai";
 import multer from "multer";
 import path from "path";
@@ -610,6 +611,44 @@ Keep responses concise and engaging. Use bullet points for clarity when listing 
       } else {
         res.status(500).json({ message: "Chatbot unavailable" });
       }
+    }
+  });
+
+  // ── Market Price: eBay sold listing scraper with 24h cache ────────────────
+  app.get("/api/market-price/:numistaId", async (req, res) => {
+    const { numistaId } = req.params;
+    const coinTitle = (req.query.q as string) || numistaId;
+
+    if (!numistaId) return res.status(400).json({ message: "numistaId required" });
+
+    try {
+      // Check 24h cache
+      const cached = await storage.getMarketPrice(numistaId);
+      if (cached?.updatedAt) {
+        const ageMs = Date.now() - new Date(cached.updatedAt).getTime();
+        if (ageMs < 24 * 60 * 60 * 1000) {
+          return res.json({ ...cached, cached: true });
+        }
+      }
+
+      // Scrape eBay
+      const listings = await scrapeEbaySoldListings(coinTitle, 3);
+      if (listings.length === 0) {
+        // Return cached stale data if we have it rather than empty
+        if (cached) return res.json({ ...cached, cached: true, stale: true });
+        return res.json({ numistaId, coinTitle, listings: [], avgPrice: null, cached: false });
+      }
+
+      const record = await storage.upsertMarketPrice(numistaId, coinTitle, listings);
+      return res.json({ ...record, cached: false });
+    } catch (err) {
+      console.error("[market-price] scrape failed:", err);
+      // Graceful degradation: return stale cache or empty
+      try {
+        const stale = await storage.getMarketPrice(numistaId);
+        if (stale) return res.json({ ...stale, cached: true, stale: true });
+      } catch {}
+      return res.json({ numistaId, coinTitle, listings: [], avgPrice: null, cached: false, error: true });
     }
   });
 
