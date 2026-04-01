@@ -299,7 +299,7 @@ export default function AddCoin() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) { window.location.href = "/auth"; return; }
     const finalPhotoUrl = formData.photoUrl.trim() || "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80";
     createCoin.mutate({
       ...formData,
@@ -307,6 +307,11 @@ export default function AddCoin() {
       backPhotoUrl: formData.backPhotoUrl.trim() || undefined,
     }, {
       onSuccess: () => setLocation("/"),
+      onError: (err: Error) => {
+        if (err.message.includes("401") || err.message.toLowerCase().includes("unauthorized")) {
+          window.location.href = "/auth";
+        }
+      },
     });
   };
 
