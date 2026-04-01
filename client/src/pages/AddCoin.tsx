@@ -261,14 +261,14 @@ export default function AddCoin() {
 
       // Filter to coins whose year range overlaps the selected year (±30 years tolerance)
       const filtered = data.filter(c => {
-        if (!c.min_year && !c.max_year) return true;
+        if (!c.min_year && !c.max_year) return false;
         const lo = c.min_year ?? c.max_year!;
         const hi = c.max_year ?? c.min_year!;
         return lo <= selectedYear + 30 && hi >= selectedYear - 30;
       });
 
-      setMapResults(filtered.length > 0 ? filtered : data.slice(0, 8));
-      if (filtered.length === 0 && data.length === 0) setMapError(`No coins found for "${entity}". Try a different territory or year.`);
+      setMapResults(filtered);
+      if (filtered.length === 0) setMapError(`No coins found for "${entity}" around ${selectedYear}. Try a different year.`);
     } catch {
       setMapError("Search unavailable. Check your connection.");
     } finally {
