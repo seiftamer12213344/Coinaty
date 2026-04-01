@@ -5,7 +5,7 @@ import { useCreateCoin } from "@/hooks/use-coins";
 import { getAuthHeaders } from "@/lib/authToken";
 import { Shell } from "@/components/layout/Shell";
 import {
-  Search, Upload, ChevronRight, X, Loader2, Sparkles,
+  Search, Upload, ChevronRight, ChevronLeft, X, Loader2, Sparkles,
   PencilLine, ExternalLink, CheckCircle2, ArrowLeft, ImagePlus, Link as LinkIcon,
   Map, Globe, Calendar, Coins
 } from "lucide-react";
@@ -162,7 +162,7 @@ export default function AddCoin() {
   const { user, isLoading: authLoading } = useAuth();
   const createCoin = useCreateCoin();
 
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const [mode, setMode] = useState<Mode>("discover");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<NumistaResult[]>([]);
@@ -398,8 +398,8 @@ export default function AddCoin() {
         {mode === "discover" && (
           <div className="space-y-4">
 
-            {/* Timeline Slider Card */}
-            <div className="bg-card border border-border/50 rounded-3xl p-5 md:p-6 shadow-xl">
+            {/* Timeline Slider Card — always LTR so 1700→2026 flows left→right */}
+            <div className="bg-card border border-border/50 rounded-3xl p-5 md:p-6 shadow-xl" dir="ltr">
               <div className="flex items-center gap-3 mb-4">
                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                   <Calendar className="w-4 h-4 text-primary" />
@@ -543,7 +543,10 @@ export default function AddCoin() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-xs text-muted-foreground group-hover:text-primary transition-colors hidden sm:block">Add to vault</span>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                          {isRTL
+                            ? <ChevronLeft className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:-translate-x-0.5 transition-all" />
+                            : <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                          }
                         </div>
                       </button>
                     ))}
@@ -588,7 +591,7 @@ export default function AddCoin() {
                 Type a coin name, year, issuer, or ruler. Select a result to auto-fill all known details.
               </p>
 
-              <div className="relative">
+              <div className="relative" dir="ltr">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
                 <input
                   data-testid="input-numista-search"
@@ -598,6 +601,7 @@ export default function AddCoin() {
                   placeholder="e.g. Egypt 1917 5 Piastres, Alexander Tetradrachm..."
                   autoFocus
                   className="w-full bg-background border border-border rounded-xl py-4 pl-12 pr-12 text-base focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-colors"
+                  style={{ direction: "ltr", textAlign: isRTL ? "right" : "left" }}
                 />
                 {query && (
                   <button onClick={() => { setQuery(""); setResults([]); }} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -654,7 +658,10 @@ export default function AddCoin() {
                           <span className="ml-2 text-xs text-muted-foreground/60">N#{coin.id}</span>
                         </p>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                      {isRTL
+                        ? <ChevronLeft className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:-translate-x-0.5 transition-all flex-shrink-0" />
+                        : <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                      }
                     </button>
                   ))}
                 </div>
