@@ -3,11 +3,13 @@ import { useCoin, useComments, useCreateComment, useToggleLike, useCoinLikes } f
 import { useUserProfile } from "@/hooks/use-users";
 import { Shell } from "@/components/layout/Shell";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { ArrowLeft, Heart, Send, MessageSquare, RefreshCw } from "lucide-react";
+import { ArrowLeft, Heart, Send, MessageSquare, RefreshCw, Ruler, Weight } from "lucide-react";
 import MarketValue from "@/components/MarketValue";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useSettings } from "@/hooks/use-settings";
+import { parseMeasurements, convertMeasurements } from "@/lib/measurements";
 import { motion } from "framer-motion";
 
 export default function CoinDetails() {
@@ -22,6 +24,7 @@ export default function CoinDetails() {
   
   const toggleLike = useToggleLike();
   const createComment = useCreateComment();
+  const { defaultUnits } = useSettings();
   
   const [newComment, setNewComment] = useState("");
   const [showReverse, setShowReverse] = useState(false);
@@ -152,6 +155,37 @@ export default function CoinDetails() {
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Metal</p>
                 <p className="font-medium text-foreground">{coin.metalType || "Unknown"}</p>
               </div>
+
+              {(() => {
+                const parsed = parseMeasurements(coin.description || "");
+                const converted = convertMeasurements(parsed, defaultUnits);
+                if (!converted.weight && !converted.diameter) return null;
+                return (
+                  <div className="pt-6 border-t border-border/30">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Measurements</p>
+                    <div className="flex gap-6 flex-wrap">
+                      {converted.weight && (
+                        <div className="flex items-center gap-2" data-testid="coin-weight">
+                          <Weight className="w-4 h-4 text-primary/70" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Weight</p>
+                            <p className="font-medium text-foreground">{converted.weight}</p>
+                          </div>
+                        </div>
+                      )}
+                      {converted.diameter && (
+                        <div className="flex items-center gap-2" data-testid="coin-diameter">
+                          <Ruler className="w-4 h-4 text-primary/70" />
+                          <div>
+                            <p className="text-xs text-muted-foreground">Diameter</p>
+                            <p className="font-medium text-foreground">{converted.diameter}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="pt-6 border-t border-border/30">
                 <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Cataloged By</p>
