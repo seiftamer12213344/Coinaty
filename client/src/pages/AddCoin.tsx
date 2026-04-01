@@ -457,17 +457,21 @@ export default function AddCoin() {
                     background: `linear-gradient(to right, #D4AF37 0%, #D4AF37 ${((selectedYear - 1700) / 326) * 100}%, #2a3a4a ${((selectedYear - 1700) / 326) * 100}%, #2a3a4a 100%)`,
                   }}
                 />
-                {/* Era markers */}
-                <div className="flex justify-between mt-2 px-0.5">
-                  {ERA_MARKERS.map(m => (
-                    <button
-                      key={m.year}
-                      onClick={() => { setSelectedYear(m.year); setSelectedCountryKey(null); setMapResults([]); setMapQuery(""); }}
-                      className={`text-xs transition-colors hover:text-primary ${selectedYear === m.year ? "text-primary font-bold" : "text-muted-foreground/60"}`}
-                    >
-                      {m.label}
-                    </button>
-                  ))}
+                {/* Era markers — absolutely positioned to match actual slider scale */}
+                <div className="relative mt-2 h-5">
+                  {ERA_MARKERS.map(m => {
+                    const pct = ((m.year - 1700) / (2026 - 1700)) * 100;
+                    return (
+                      <button
+                        key={m.year}
+                        onClick={() => { setSelectedYear(m.year); setSelectedCountryKey(null); setMapResults([]); setMapQuery(""); }}
+                        className={`absolute -translate-x-1/2 text-xs transition-colors hover:text-primary ${selectedYear === m.year ? "text-primary font-bold" : "text-muted-foreground/60"}`}
+                        style={{ left: `${pct}%` }}
+                      >
+                        {m.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
