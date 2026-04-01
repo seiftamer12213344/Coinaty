@@ -3,7 +3,7 @@ import { useCoin, useComments, useCreateComment, useToggleLike, useCoinLikes } f
 import { useUserProfile } from "@/hooks/use-users";
 import { Shell } from "@/components/layout/Shell";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import { ArrowLeft, Heart, Send, MessageSquare } from "lucide-react";
+import { ArrowLeft, Heart, Send, MessageSquare, RefreshCw } from "lucide-react";
 import MarketValue from "@/components/MarketValue";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
@@ -24,6 +24,7 @@ export default function CoinDetails() {
   const createComment = useCreateComment();
   
   const [newComment, setNewComment] = useState("");
+  const [showReverse, setShowReverse] = useState(false);
 
   const hasLiked = likes?.some(u => u.id === user?.id) || false;
 
@@ -70,11 +71,34 @@ export default function CoinDetails() {
                  <div className="w-[80%] h-[80%] rounded-full border border-primary border-dashed animate-[spin_60s_linear_infinite]" />
                </div>
 
-              <img 
-                src={coin.photoUrl || "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=1200&q=80"} 
-                alt={coin.title}
+              <motion.img 
+                key={showReverse ? "reverse" : "obverse"}
+                initial={{ rotateY: 90, opacity: 0 }}
+                animate={{ rotateY: 0, opacity: 1 }}
+                transition={{ duration: 0.35 }}
+                src={showReverse && coin.backPhotoUrl ? coin.backPhotoUrl : (coin.photoUrl || "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=1200&q=80")} 
+                alt={showReverse ? `${coin.title} — Reverse` : coin.title}
                 className="w-full h-full object-contain drop-shadow-2xl z-10 hover:scale-110 transition-transform duration-700 cursor-zoom-in"
               />
+
+              {/* Side label */}
+              <div className="absolute bottom-4 left-4 z-20">
+                <span className="px-2.5 py-1 rounded-full bg-black/60 border border-primary/30 text-primary text-[10px] font-semibold uppercase tracking-widest">
+                  {showReverse ? "Reverse" : "Obverse"}
+                </span>
+              </div>
+
+              {/* Flip button */}
+              {(coin.backPhotoUrl) && (
+                <button
+                  data-testid="button-flip-coin"
+                  onClick={() => setShowReverse(v => !v)}
+                  className="absolute bottom-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 border border-primary/40 text-primary hover:bg-primary/20 hover:border-primary transition-all text-xs font-semibold"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Reverse
+                </button>
+              )}
             </motion.div>
 
             {/* Interaction Bar */}
