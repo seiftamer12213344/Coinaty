@@ -107,18 +107,17 @@ export default function Auth() {
         <ThemeToggle />
       </div>
 
-      <a
-        href="/"
-        data-testid="link-back-to-gallery"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-6 group"
-      >
-        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-        Back to Gallery
-      </a>
-
-      <div className="mb-8">
+      <div className="mb-8 flex flex-col items-center gap-4">
         <img src={logoDarkMode} alt="Coinaty" className="h-16 w-auto object-contain hidden dark:block" />
         <img src={logoLightMode} alt="Coinaty" className="h-16 w-auto object-contain block dark:hidden" />
+        <a
+          href="/"
+          data-testid="link-back-to-gallery"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors group"
+        >
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          Back to Gallery
+        </a>
       </div>
 
       <Card className="w-full max-w-md border-border/50 shadow-2xl">
