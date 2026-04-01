@@ -1,3 +1,4 @@
+import { getAuthHeaders } from '@/lib/authToken';
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import type { Coin } from "@shared/schema";
@@ -6,7 +7,7 @@ export function useWatchlist(enabled = true) {
   return useQuery<Coin[]>({
     queryKey: ["/api/watchlist"],
     queryFn: async () => {
-      const res = await fetch("/api/watchlist", { credentials: "include" });
+      const res = await fetch("/api/watchlist", { credentials: "include", headers: getAuthHeaders() });
       if (res.status === 401) return [];
       if (!res.ok) throw new Error("Failed to fetch watchlist");
       return res.json();
@@ -19,7 +20,7 @@ export function useWatchlistStatus(coinId: number) {
   return useQuery<{ inWatchlist: boolean }>({
     queryKey: ["/api/watchlist", coinId, "status"],
     queryFn: async () => {
-      const res = await fetch(`/api/watchlist/${coinId}/status`, { credentials: "include" });
+      const res = await fetch(`/api/watchlist/${coinId}/status`, { credentials: "include", headers: getAuthHeaders() });
       if (!res.ok) return { inWatchlist: false };
       return res.json();
     },

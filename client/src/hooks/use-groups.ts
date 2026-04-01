@@ -1,3 +1,4 @@
+import { getAuthHeaders } from '@/lib/authToken';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 
@@ -5,7 +6,7 @@ export function useGroups() {
   return useQuery({
     queryKey: ["/api/groups"],
     queryFn: async () => {
-      const res = await fetch(api.groups.list.path, { credentials: "include" });
+      const res = await fetch(api.groups.list.path, { credentials: "include", headers: getAuthHeaders() });
       if (res.status === 401) return [];
       if (!res.ok) throw new Error("Failed to fetch groups");
       return res.json();
@@ -19,7 +20,7 @@ export function useGroupMessages(groupId?: number) {
     queryFn: async () => {
       if (!groupId) return [];
       const url = buildUrl(api.groups.messages.path, { id: groupId });
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, { credentials: "include", headers: getAuthHeaders() });
       if (!res.ok) throw new Error("Failed to fetch group messages");
       return res.json();
     },
@@ -34,7 +35,7 @@ export function useGroupMembers(groupId?: number) {
     queryFn: async () => {
       if (!groupId) return [];
       const url = buildUrl(api.groups.members.path, { id: groupId });
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, { credentials: "include", headers: getAuthHeaders() });
       if (!res.ok) throw new Error("Failed to fetch members");
       return res.json();
     },
@@ -46,7 +47,7 @@ export function usePendingInvitations() {
   return useQuery({
     queryKey: ["/api/groups/invitations"],
     queryFn: async () => {
-      const res = await fetch(api.groups.pendingInvitations.path, { credentials: "include" });
+      const res = await fetch(api.groups.pendingInvitations.path, { credentials: "include", headers: getAuthHeaders() });
       if (res.status === 401) return [];
       if (!res.ok) throw new Error("Failed to fetch invitations");
       return res.json();
@@ -61,7 +62,7 @@ export function useCreateGroup() {
     mutationFn: async (name: string) => {
       const res = await fetch(api.groups.create.path, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ name }),
         credentials: "include",
       });
@@ -81,7 +82,7 @@ export function useSendGroupMessage() {
       const url = buildUrl(api.groups.sendMessage.path, { id: groupId });
       const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ content }),
         credentials: "include",
       });
@@ -101,7 +102,7 @@ export function useInviteToGroup() {
       const url = buildUrl(api.groups.invite.path, { id: groupId });
       const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ userId }),
         credentials: "include",
       });
@@ -124,7 +125,7 @@ export function useRespondToInvitation() {
       const url = buildUrl(api.groups.respondInvitation.path, { id: invitationId });
       const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({ accept }),
         credentials: "include",
       });

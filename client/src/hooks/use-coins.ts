@@ -4,6 +4,7 @@ import { api, buildUrl } from "@shared/routes";
 import type { InsertCoin } from "@shared/schema";
 import { z } from "zod";
 import { onWS } from "@/lib/websocket";
+import { getAuthHeaders } from "@/lib/authToken";
 
 // Fetch all coins (Feed)
 export function useCoins(filters?: { category?: string; userId?: string }) {
@@ -16,7 +17,7 @@ export function useCoins(filters?: { category?: string; userId?: string }) {
   return useQuery({
     queryKey: [api.coins.list.path, filters],
     queryFn: async () => {
-      const res = await fetch(path, { credentials: "include" });
+      const res = await fetch(path, { credentials: "include", headers: getAuthHeaders() });
       if (!res.ok) throw new Error("Failed to fetch coins");
       return api.coins.list.responses[200].parse(await res.json());
     },
@@ -29,7 +30,7 @@ export function useCoin(id: number) {
     queryKey: [api.coins.get.path, id],
     queryFn: async () => {
       const url = buildUrl(api.coins.get.path, { id });
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, { credentials: "include", headers: getAuthHeaders() });
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to fetch coin");
       return api.coins.get.responses[200].parse(await res.json());
@@ -47,7 +48,7 @@ export function useCreateCoin() {
       
       const res = await fetch(api.coins.create.path, {
         method: api.coins.create.method,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(validated),
         credentials: "include",
       });
@@ -76,6 +77,7 @@ export function useDeleteCoin() {
       const res = await fetch(url, {
         method: api.coins.delete.method,
         credentials: "include",
+        headers: getAuthHeaders(),
       });
       if (res.status === 403) throw new Error("Not authorized");
       if (!res.ok) throw new Error("Failed to delete coin");
@@ -96,6 +98,7 @@ export function useToggleLike() {
       const res = await fetch(url, {
         method: api.coins.toggleLike.method,
         credentials: "include",
+        headers: getAuthHeaders(),
       });
       if (!res.ok) {
         if (res.status === 401) throw new Error("Unauthorized");
@@ -128,7 +131,7 @@ export function useCoinLikes(id: number) {
     queryKey: [api.coins.getLikes.path, id],
     queryFn: async () => {
       const url = buildUrl(api.coins.getLikes.path, { id });
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, { credentials: "include", headers: getAuthHeaders() });
       if (!res.ok) throw new Error("Failed to fetch likes");
       return api.coins.getLikes.responses[200].parse(await res.json());
     },
@@ -142,7 +145,7 @@ export function useComments(coinId: number) {
     queryKey: [api.comments.list.path, coinId],
     queryFn: async () => {
       const url = buildUrl(api.comments.list.path, { id: coinId });
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, { credentials: "include", headers: getAuthHeaders() });
       if (!res.ok) throw new Error("Failed to fetch comments");
       return api.comments.list.responses[200].parse(await res.json());
     },
@@ -160,7 +163,7 @@ export function useCreateComment() {
       
       const res = await fetch(url, {
         method: api.comments.create.method,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(validated),
         credentials: "include",
       });

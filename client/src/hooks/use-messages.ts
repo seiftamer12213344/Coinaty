@@ -1,3 +1,4 @@
+import { getAuthHeaders } from '@/lib/authToken';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { api, buildUrl } from "@shared/routes";
@@ -15,7 +16,7 @@ export function useConversations() {
   return useQuery({
     queryKey: [api.messages.getConversations.path],
     queryFn: async () => {
-      const res = await fetch(api.messages.getConversations.path, { credentials: "include" });
+      const res = await fetch(api.messages.getConversations.path, { credentials: "include", headers: getAuthHeaders() });
       if (res.status === 401) return [];
       if (!res.ok) throw new Error("Failed to fetch conversations");
       return api.messages.getConversations.responses[200].parse(await res.json());
@@ -41,7 +42,7 @@ export function useMessages(userId?: string) {
     queryFn: async () => {
       if (!userId) return [];
       const url = buildUrl(api.messages.list.path, { userId });
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(url, { credentials: "include", headers: getAuthHeaders() });
       if (res.status === 401) return [];
       if (!res.ok) throw new Error("Failed to fetch messages");
       return api.messages.list.responses[200].parse(await res.json());
@@ -58,7 +59,7 @@ export function useSendMessage() {
       const url = buildUrl(api.messages.send.path, { userId });
       const res = await fetch(url, {
         method: api.messages.send.method,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify(validated),
         credentials: "include",
       });

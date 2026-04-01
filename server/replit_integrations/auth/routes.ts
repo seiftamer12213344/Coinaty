@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { authStorage } from "./storage";
-import { isAuthenticated } from "./replitAuth";
+import { isAuthenticated, generateAuthToken } from "./replitAuth";
 
 import { db } from "../../db";
 import { users } from "@shared/schema";
@@ -45,12 +45,9 @@ export function registerAuthRoutes(app: Express): void {
 
       (req.session as any).localUser = { userId: newUser.id };
       req.session.save((err) => {
-        if (err) {
-          console.error("Session save error:", err);
-          return res.status(500).json({ message: "Registration failed" });
-        }
+        if (err) console.error("Session save error:", err);
         const { password, ...safeUser } = newUser;
-        res.status(201).json(safeUser);
+        res.status(201).json({ ...safeUser, authToken: generateAuthToken(newUser.id) });
       });
     } catch (error) {
       console.error("Error registering user:", error);
@@ -77,12 +74,9 @@ export function registerAuthRoutes(app: Express): void {
 
       (req.session as any).localUser = { userId: user.id };
       req.session.save((err) => {
-        if (err) {
-          console.error("Session save error:", err);
-          return res.status(500).json({ message: "Login failed" });
-        }
+        if (err) console.error("Session save error:", err);
         const { password, ...safeUser } = user;
-        res.json(safeUser);
+        res.json({ ...safeUser, authToken: generateAuthToken(user.id) });
       });
     } catch (error) {
       console.error("Error logging in:", error);

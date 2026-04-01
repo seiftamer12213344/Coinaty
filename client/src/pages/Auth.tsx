@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
+import { saveAuthToken } from "@/lib/authToken";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +42,9 @@ export default function Auth() {
       return res.json();
     },
     onSuccess: (userData) => {
-      queryClient.setQueryData(["/api/auth/user"], userData);
+      if (userData.authToken) saveAuthToken(userData.id, userData.authToken);
+      const { authToken, ...safeUser } = userData;
+      queryClient.setQueryData(["/api/auth/user"], safeUser);
       navigate("/");
     },
     onError: (err: Error) => {
@@ -64,7 +67,9 @@ export default function Auth() {
       return res.json();
     },
     onSuccess: (userData) => {
-      queryClient.setQueryData(["/api/auth/user"], userData);
+      if (userData.authToken) saveAuthToken(userData.id, userData.authToken);
+      const { authToken, ...safeUser } = userData;
+      queryClient.setQueryData(["/api/auth/user"], safeUser);
       navigate("/");
     },
     onError: (err: Error) => {

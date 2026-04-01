@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useCreateCoin } from "@/hooks/use-coins";
+import { getAuthHeaders } from "@/lib/authToken";
 import { Shell } from "@/components/layout/Shell";
 import {
   Search, Upload, ChevronRight, X, Loader2, Sparkles,
@@ -61,7 +62,7 @@ function ImageUploadField({ label, badge, badgeVariant, hint, value, onChange, a
     try {
       const form = new FormData();
       form.append("image", file);
-      const res = await fetch("/api/upload", { method: "POST", body: form, credentials: "include" });
+      const res = await fetch("/api/upload", { method: "POST", body: form, credentials: "include", headers: getAuthHeaders() });
       if (!res.ok) throw new Error("Upload failed");
       const { url } = await res.json();
       onChange(url);

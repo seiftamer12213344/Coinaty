@@ -7,6 +7,22 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
+import crypto from "crypto";
+
+// ── Token helpers ─────────────────────────────────────────────────────────────
+export function generateAuthToken(userId: string): string {
+  const secret = process.env.SESSION_SECRET!;
+  return crypto.createHmac("sha256", secret).update(userId).digest("hex");
+}
+
+export function verifyAuthToken(userId: string, token: string): boolean {
+  const expected = generateAuthToken(userId);
+  try {
+    return crypto.timingSafeEqual(Buffer.from(token, "hex"), Buffer.from(expected, "hex"));
+  } catch {
+    return false;
+  }
+}
 
 const getOidcConfig = memoize(
   async () => {
@@ -132,6 +148,18 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  // ── 1. Bearer token (localStorage-based, works in iframe / no-cookie context) ─
+  const authHeader = req.headers["authorization"];
+  const xUserId = req.headers["x-user-id"] as string | undefined;
+  if (authHeader?.startsWith("Bearer ") && xUserId) {
+    const token = authHeader.slice(7);
+    if (verifyAuthToken(xUserId, token)) {
+      (req as any).user = { userId: xUserId, claims: { sub: xUserId } };
+      return next();
+    }
+  }
+
+  // ── 2. Session cookie (works when cookies are allowed) ─────────────────────
   const localUser = (req.session as any)?.localUser;
   if (localUser?.userId) {
     (req as any).user = { userId: localUser.userId, claims: { sub: localUser.userId } };
