@@ -141,6 +141,16 @@ export function useCoinLikes(id: number) {
 
 // Fetch comments for a coin
 export function useComments(coinId: number) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    return onWS("comment:new", (data) => {
+      if (data.coinId === coinId) {
+        queryClient.invalidateQueries({ queryKey: [api.comments.list.path, coinId] });
+      }
+    });
+  }, [coinId, queryClient]);
+
   return useQuery({
     queryKey: [api.comments.list.path, coinId],
     queryFn: async () => {

@@ -152,6 +152,7 @@ export async function registerRoutes(
       if (isNaN(id)) return res.status(404).json({ message: "Invalid ID" });
       const input = api.comments.create.input.parse(req.body);
       const comment = await storage.createComment(id, req.user.claims.sub, input.content);
+      broadcast({ type: "comment:new", coinId: id, comment });
       res.status(201).json(comment);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -339,6 +340,8 @@ export async function registerRoutes(
       if (!isMember) return res.status(403).json({ message: "Not a member" });
       const { content } = api.groups.sendMessage.input.parse(req.body);
       const msg = await storage.sendGroupMessage(groupId, req.user.claims.sub, content);
+      const members = await storage.getGroupMembers(groupId);
+      members.forEach(m => sendToUser(m.userId, { type: "group:message:new", groupId, message: msg }));
       res.status(201).json(msg);
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });

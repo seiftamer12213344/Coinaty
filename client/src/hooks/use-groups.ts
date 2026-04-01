@@ -1,6 +1,8 @@
 import { getAuthHeaders } from '@/lib/authToken';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api, buildUrl } from "@shared/routes";
+import { onWS } from "@/lib/websocket";
 
 export function useGroups() {
   return useQuery({
@@ -15,6 +17,17 @@ export function useGroups() {
 }
 
 export function useGroupMessages(groupId?: number) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!groupId) return;
+    return onWS("group:message:new", (data) => {
+      if (data.groupId === groupId) {
+        queryClient.invalidateQueries({ queryKey: ["/api/groups/messages", groupId] });
+      }
+    });
+  }, [groupId, queryClient]);
+
   return useQuery({
     queryKey: ["/api/groups/messages", groupId],
     queryFn: async () => {
@@ -25,7 +38,6 @@ export function useGroupMessages(groupId?: number) {
       return res.json();
     },
     enabled: !!groupId,
-    refetchInterval: 5000,
   });
 }
 
