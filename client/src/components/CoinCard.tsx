@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Heart, MessageSquare, ExternalLink, BadgeCheck, Trash2, Bookmark, FlipHorizontal2 } from "lucide-react";
+import { Heart, MessageSquare, ExternalLink, BadgeCheck, Trash2, Bookmark, RefreshCw } from "lucide-react";
 import type { Coin } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
 import { useToggleLike, useCoinLikes, useComments, useDeleteCoin } from "@/hooks/use-coins";
@@ -89,44 +89,74 @@ export function CoinCard({ coin }: { coin: Coin }) {
           )}
         </div>
       </div>
-      {/* Image with flip support */}
-      <div className="relative aspect-square w-full bg-black/50 overflow-hidden">
-        <div className="absolute inset-0 bg-radial-gradient from-transparent to-black/60 z-10 pointer-events-none" />
-        <Link href={`/coin/${coin.id}`}>
-          <img
-            key={showBack ? "back" : "front"}
-            src={
-              showBack
-                ? (coin.backPhotoUrl || "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80")
-                : (coin.photoUrl || "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80")
-            }
-            alt={showBack ? `${coin.title} — Reverse` : `${coin.title} — Obverse`}
-            className="w-full h-full object-contain cursor-pointer transform group-hover:scale-105 transition-all duration-700 ease-out animate-in fade-in duration-300"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80";
-            }}
-          />
-        </Link>
+      {/* 3D Flip Card */}
+      <div className="relative aspect-square w-full" style={{ perspective: "1000px" }}>
+        <div
+          className="relative w-full h-full transition-transform duration-700 ease-in-out"
+          style={{
+            transformStyle: "preserve-3d",
+            transform: showBack ? "rotateY(180deg)" : "rotateY(0deg)",
+          }}
+        >
+          {/* Front face — Obverse */}
+          <div className="absolute inset-0 bg-black/50" style={{ backfaceVisibility: "hidden" }}>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent z-10 pointer-events-none" />
+            <Link href={`/coin/${coin.id}`}>
+              <img
+                src={coin.photoUrl || "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80"}
+                alt={`${coin.title} — Obverse`}
+                className="w-full h-full object-contain cursor-pointer"
+                onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80"; }}
+              />
+            </Link>
+            <div className="absolute top-3 left-3 z-20">
+              <span className="text-[10px] font-semibold uppercase tracking-widest px-2 py-1 rounded-full bg-black/60 text-white/70 backdrop-blur-sm border border-white/10">
+                Obverse
+              </span>
+            </div>
+          </div>
 
-        {/* Face label */}
-        <div className="absolute top-3 left-3 z-20">
-          <span className="text-[10px] font-semibold uppercase tracking-widest px-2 py-1 rounded-full bg-black/60 text-white/70 backdrop-blur-sm border border-white/10">
-            {showBack ? "Reverse" : "Obverse"}
-          </span>
+          {/* Back face — Reverse */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent z-10 pointer-events-none" />
+            {coin.backPhotoUrl ? (
+              <Link href={`/coin/${coin.id}`}>
+                <img
+                  src={coin.backPhotoUrl}
+                  alt={`${coin.title} — Reverse`}
+                  className="w-full h-full object-contain cursor-pointer"
+                  onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=800&q=80"; }}
+                />
+              </Link>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white/40">
+                <div className="w-20 h-20 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center">
+                  <RefreshCw className="w-8 h-8 opacity-40" />
+                </div>
+                <p className="text-xs font-medium tracking-widest uppercase">No Reverse Image</p>
+              </div>
+            )}
+            <div className="absolute top-3 left-3 z-20">
+              <span className="text-[10px] font-semibold uppercase tracking-widest px-2 py-1 rounded-full bg-black/60 text-white/70 backdrop-blur-sm border border-white/10">
+                Reverse
+              </span>
+            </div>
+          </div>
         </div>
 
-        {/* Flip button — only shown if back photo exists */}
-        {coin.backPhotoUrl && (
-          <button
-            data-testid={`button-flip-${coin.id}`}
-            onClick={(e) => { e.preventDefault(); setShowBack(b => !b); }}
-            title={showBack ? "Show Front (Obverse)" : "Show Back (Reverse)"}
-            className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 hover:bg-primary/80 backdrop-blur-sm border border-white/15 hover:border-primary text-white/80 hover:text-white text-xs font-medium transition-all"
-          >
-            <FlipHorizontal2 className="w-3.5 h-3.5" />
-            Flip
-          </button>
-        )}
+        {/* Flip button — always visible */}
+        <button
+          data-testid={`button-flip-${coin.id}`}
+          onClick={(e) => { e.preventDefault(); setShowBack(b => !b); }}
+          title={showBack ? "Show Obverse" : "Show Reverse"}
+          className="absolute bottom-3 right-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 hover:bg-primary/80 backdrop-blur-sm border border-white/15 hover:border-primary text-white/80 hover:text-white text-xs font-semibold transition-all duration-200 shadow-lg"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 transition-transform duration-700 ${showBack ? "rotate-180" : "rotate-0"}`} />
+          {showBack ? "Obverse" : "Reverse"}
+        </button>
       </div>
       {/* Content */}
       <div className="p-5">
