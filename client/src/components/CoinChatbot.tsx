@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Bot, X, Send, RotateCcw, Sparkles, ChevronDown, Loader2, AlertCircle, Plus, ImageIcon } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 type Role = "user" | "assistant";
 interface ChatMessage {
@@ -99,6 +100,8 @@ function MessageBubble({ msg, isStreaming }: { msg: ChatMessage; isStreaming?: b
 }
 
 export function CoinChatbot() {
+  const { language } = useLanguage();
+  const isRTL = language === "ar";
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -216,7 +219,7 @@ export function CoinChatbot() {
       <button
         data-testid="button-chatbot-toggle"
         onClick={() => setOpen(o => !o)}
-        className={`fixed bottom-24 md:bottom-6 right-4 md:right-6 z-50 w-14 h-14 rounded-full shadow-xl transition-all duration-300 flex items-center justify-center group ${
+        className={`fixed bottom-24 md:bottom-6 z-50 w-14 h-14 rounded-full shadow-xl transition-all duration-300 flex items-center justify-center group ${isRTL ? "left-4 md:left-6" : "right-4 md:right-6"} ${
           open
             ? "bg-muted border border-border text-muted-foreground hover:text-foreground"
             : "bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-0.5"
@@ -239,7 +242,7 @@ export function CoinChatbot() {
 
       {/* Chat Panel */}
       <div
-        className={`fixed bottom-40 md:bottom-24 right-4 md:right-6 z-50 w-[calc(100vw-2rem)] max-w-sm transition-all duration-300 origin-bottom-right ${
+        className={`fixed bottom-40 md:bottom-24 z-50 w-[calc(100vw-2rem)] max-w-sm transition-all duration-300 ${isRTL ? "left-4 md:left-6 origin-bottom-left" : "right-4 md:right-6 origin-bottom-right"} ${
           open ? "scale-100 opacity-100 pointer-events-auto" : "scale-95 opacity-0 pointer-events-none"
         }`}
       >
