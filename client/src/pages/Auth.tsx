@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Loader2, Mail, Lock, User, ArrowRight, ArrowLeft } from "lucide-react";
 import logoDarkMode from "@assets/Screen_Shot_2026-03-27_at_11.55.29_AM_1774605354354.png";
 import logoLightMode from "@assets/Screen_Shot_2026-03-27_at_11.55.36_AM_1774605354357.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -106,6 +106,15 @@ export default function Auth() {
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
+
+      <a
+        href="/"
+        data-testid="link-back-to-gallery"
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-6 group"
+      >
+        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+        Back to Gallery
+      </a>
 
       <div className="mb-8">
         <img src={logoDarkMode} alt="Coinaty" className="h-16 w-auto object-contain hidden dark:block" />
