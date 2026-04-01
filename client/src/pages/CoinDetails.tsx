@@ -78,7 +78,7 @@ export default function CoinDetails() {
                 transition={{ duration: 0.35 }}
                 src={showReverse && coin.backPhotoUrl ? coin.backPhotoUrl : (coin.photoUrl || "https://images.unsplash.com/photo-1596704017254-9b121068fb31?w=1200&q=80")} 
                 alt={showReverse ? `${coin.title} — Reverse` : coin.title}
-                className="w-full h-full object-contain drop-shadow-2xl z-10 hover:scale-110 transition-transform duration-700 cursor-zoom-in"
+                className="max-w-full max-h-full object-contain drop-shadow-2xl z-10 hover:scale-110 transition-transform duration-700 cursor-zoom-in"
               />
 
               {/* Side label */}
