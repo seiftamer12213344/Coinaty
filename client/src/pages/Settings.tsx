@@ -6,6 +6,8 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/lib/i18n";
+import type { Language } from "@/lib/i18n";
 import {
   ArrowLeft,
   Lock,
@@ -22,6 +24,7 @@ import {
   Trash2,
   AlertTriangle,
   UserX,
+  Globe,
 } from "lucide-react";
 import { Link } from "wouter";
 import type { UserSettings } from "@shared/schema";
@@ -68,6 +71,7 @@ export default function Settings() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { t, language, setLanguage } = useLanguage();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -93,9 +97,9 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
-      toast({ title: "Settings saved" });
+      toast({ title: t("settingsSaved") });
     },
-    onError: () => toast({ title: "Failed to save", variant: "destructive" }),
+    onError: () => toast({ title: t("failedToSave"), variant: "destructive" }),
   });
 
   const changePasswordMut = useMutation({
@@ -109,10 +113,10 @@ export default function Settings() {
     onSuccess: () => {
       setCurrentPassword("");
       setNewPassword("");
-      toast({ title: "Password updated" });
+      toast({ title: t("passwordUpdated") });
     },
     onError: (err: any) => {
-      toast({ title: err.message || "Failed to change password", variant: "destructive" });
+      toast({ title: err.message || t("failedToSave"), variant: "destructive" });
     },
   });
 
@@ -122,7 +126,7 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings/blocked"] });
-      toast({ title: "User unblocked" });
+      toast({ title: t("userUnblocked") });
     },
   });
 
@@ -134,16 +138,16 @@ export default function Settings() {
       queryClient.clear();
       window.location.href = "/auth";
     },
-    onError: () => toast({ title: "Failed to delete account", variant: "destructive" }),
+    onError: () => toast({ title: t("failedToSave"), variant: "destructive" }),
   });
 
   if (!isAuthenticated) {
     return (
       <Shell>
         <div className="p-8 text-center pt-32">
-          <h2 className="text-2xl font-serif text-primary">Sign In Required</h2>
+          <h2 className="text-2xl font-serif text-primary">{t("signInRequired")}</h2>
           <Link href="/auth" className="text-muted-foreground mt-4 inline-block hover:underline">
-            Sign in to access settings
+            {t("signInToAccess")}
           </Link>
         </div>
       </Shell>
@@ -160,6 +164,12 @@ export default function Settings() {
     );
   }
 
+  const LANGS: { code: Language; label: string; flag: string }[] = [
+    { code: "en", label: t("english"), flag: "🇬🇧" },
+    { code: "ar", label: t("arabic"), flag: "🇸🇦" },
+    { code: "fr", label: t("french"), flag: "🇫🇷" },
+  ];
+
   return (
     <Shell>
       <div className="p-4 md:p-8 max-w-2xl mx-auto">
@@ -168,38 +178,69 @@ export default function Settings() {
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors mb-6 group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          Back to Gallery
+          {t("backToGallerySettings")}
         </Link>
 
         <h1 className="text-3xl font-serif font-bold text-foreground mb-8" data-testid="text-settings-title">
-          Settings
+          {t("settingsTitle")}
         </h1>
 
         <div className="space-y-6">
+          {/* Language */}
+          <div className="bg-card border border-border/50 rounded-2xl p-6">
+            <SectionHeader title={t("language")} icon={Globe} />
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Globe className="w-4 h-4 text-muted-foreground" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">{t("language")}</p>
+                  <p className="text-xs text-muted-foreground">{t("languageDesc")}</p>
+                </div>
+              </div>
+              <div className="flex rounded-lg overflow-hidden border border-border/50">
+                {LANGS.map((lang) => (
+                  <button
+                    key={lang.code}
+                    data-testid={`button-lang-${lang.code}`}
+                    onClick={() => setLanguage(lang.code)}
+                    className={`px-3 py-1.5 text-xs font-semibold transition-colors flex items-center gap-1 ${
+                      language === lang.code
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <span>{lang.flag}</span>
+                    <span>{lang.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Account Security */}
           <div className="bg-card border border-border/50 rounded-2xl p-6">
-            <SectionHeader title="Account Security" icon={Lock} />
+            <SectionHeader title={t("accountSecurity")} icon={Lock} />
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Current Password</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">{t("currentPassword")}</label>
                 <input
                   data-testid="input-current-password"
                   type="password"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Enter current password"
+                  placeholder={t("enterCurrentPassword")}
                   className="w-full bg-background border border-border/50 rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">New Password</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">{t("newPassword")}</label>
                 <input
                   data-testid="input-new-password"
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password (min. 6 characters)"
+                  placeholder={t("enterNewPassword")}
                   className="w-full bg-background border border-border/50 rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
                 />
               </div>
@@ -209,22 +250,22 @@ export default function Settings() {
                 disabled={!newPassword || newPassword.length < 6 || changePasswordMut.isPending}
                 className="px-5 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {changePasswordMut.isPending ? "Changing..." : "Change Password"}
+                {changePasswordMut.isPending ? t("changing") : t("changePassword")}
               </button>
             </div>
 
             <div className="mt-6 pt-6 border-t border-border/30">
               <div className="flex items-center gap-3 mb-2">
                 <Monitor className="w-4 h-4 text-muted-foreground" />
-                <h3 className="text-sm font-semibold text-foreground">Active Sessions</h3>
+                <h3 className="text-sm font-semibold text-foreground">{t("activeSessions")}</h3>
               </div>
               <div className="bg-background rounded-xl p-3 border border-border/30 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-foreground">Current Session</p>
-                  <p className="text-xs text-muted-foreground">Logged in now</p>
+                  <p className="text-sm font-medium text-foreground">{t("currentSession")}</p>
+                  <p className="text-xs text-muted-foreground">{t("loggedInNow")}</p>
                 </div>
                 <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 text-[10px] font-semibold">
-                  Active
+                  {t("active")}
                 </span>
               </div>
             </div>
@@ -232,15 +273,15 @@ export default function Settings() {
 
           {/* Collection Preferences */}
           <div className="bg-card border border-border/50 rounded-2xl p-6">
-            <SectionHeader title="Collection Preferences" icon={Scale} />
+            <SectionHeader title={t("collectionPreferences")} icon={Scale} />
 
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Ruler className="w-4 h-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium text-foreground">Default Units</p>
-                    <p className="text-xs text-muted-foreground">Measurement system for dimensions & weight</p>
+                    <p className="text-sm font-medium text-foreground">{t("defaultUnits")}</p>
+                    <p className="text-xs text-muted-foreground">{t("measurementSystem")}</p>
                   </div>
                 </div>
                 <div className="flex rounded-lg overflow-hidden border border-border/50">
@@ -273,8 +314,8 @@ export default function Settings() {
                 <div className="flex items-center gap-3">
                   <Scale className="w-4 h-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium text-foreground">Condition Scale</p>
-                    <p className="text-xs text-muted-foreground">Preferred grading system</p>
+                    <p className="text-sm font-medium text-foreground">{t("conditionScale")}</p>
+                    <p className="text-xs text-muted-foreground">{t("preferredGrading")}</p>
                   </div>
                 </div>
                 <select
@@ -294,15 +335,15 @@ export default function Settings() {
 
           {/* Privacy & Notifications */}
           <div className="bg-card border border-border/50 rounded-2xl p-6">
-            <SectionHeader title="Privacy & Notifications" icon={ShieldOff} />
+            <SectionHeader title={t("privacyNotifications")} icon={ShieldOff} />
 
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <MessageCircle className="w-4 h-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium text-foreground">Message Requests</p>
-                    <p className="text-xs text-muted-foreground">Who can send you direct messages</p>
+                    <p className="text-sm font-medium text-foreground">{t("messageRequests")}</p>
+                    <p className="text-xs text-muted-foreground">{t("whoCanMessage")}</p>
                   </div>
                 </div>
                 <div className="flex rounded-lg overflow-hidden border border-border/50">
@@ -315,7 +356,7 @@ export default function Settings() {
                         : "bg-background text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    Everyone
+                    {t("everyone")}
                   </button>
                   <button
                     data-testid="button-messages-followers"
@@ -326,7 +367,7 @@ export default function Settings() {
                         : "bg-background text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    Only Followers
+                    {t("onlyFollowers")}
                   </button>
                 </div>
               </div>
@@ -336,14 +377,14 @@ export default function Settings() {
                 <div className="flex items-center gap-3 mb-3">
                   <UserX className="w-4 h-4 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium text-foreground">Blocked Users</p>
-                    <p className="text-xs text-muted-foreground">Users you've blocked</p>
+                    <p className="text-sm font-medium text-foreground">{t("blockedUsers")}</p>
+                    <p className="text-xs text-muted-foreground">{t("usersYouBlocked")}</p>
                   </div>
                 </div>
                 {blockedLoading ? (
                   <LoadingSpinner />
                 ) : !blockedUsers || blockedUsers.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic pl-7">No blocked users</p>
+                  <p className="text-xs text-muted-foreground italic pl-7">{t("noBlockedUsers")}</p>
                 ) : (
                   <div className="space-y-2 pl-7">
                     {blockedUsers.map((b) => (
@@ -356,7 +397,7 @@ export default function Settings() {
                           <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-serif">
                             {(b.user.displayName || "U")[0].toUpperCase()}
                           </div>
-                          <span className="text-sm font-medium">{b.user.displayName || "Unknown"}</span>
+                          <span className="text-sm font-medium">{b.user.displayName || t("unknown")}</span>
                         </div>
                         <button
                           data-testid={`button-unblock-${b.blockedUserId}`}
@@ -364,7 +405,7 @@ export default function Settings() {
                           disabled={unblockMut.isPending}
                           className="px-3 py-1 rounded-lg text-xs font-semibold bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
                         >
-                          Unblock
+                          {t("unblock")}
                         </button>
                       </div>
                     ))}
@@ -381,8 +422,8 @@ export default function Settings() {
                       <Eye className="w-4 h-4 text-muted-foreground" />
                     )}
                     <div>
-                      <p className="text-sm font-medium text-foreground">Ghost Mode</p>
-                      <p className="text-xs text-muted-foreground">Hide your online status from Global Chat</p>
+                      <p className="text-sm font-medium text-foreground">{t("ghostMode")}</p>
+                      <p className="text-xs text-muted-foreground">{t("hideOnlineStatus")}</p>
                     </div>
                   </div>
                   <ToggleSwitch
@@ -396,8 +437,8 @@ export default function Settings() {
                   <div className="flex items-center gap-3">
                     <Heart className="w-4 h-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">Like Notifications</p>
-                      <p className="text-xs text-muted-foreground">Email alerts for new likes</p>
+                      <p className="text-sm font-medium text-foreground">{t("likeNotifications")}</p>
+                      <p className="text-xs text-muted-foreground">{t("emailLikes")}</p>
                     </div>
                   </div>
                   <ToggleSwitch
@@ -411,8 +452,8 @@ export default function Settings() {
                   <div className="flex items-center gap-3">
                     <MessageSquare className="w-4 h-4 text-muted-foreground" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">Comment Notifications</p>
-                      <p className="text-xs text-muted-foreground">Email alerts for new comments</p>
+                      <p className="text-sm font-medium text-foreground">{t("commentNotifications")}</p>
+                      <p className="text-xs text-muted-foreground">{t("emailComments")}</p>
                     </div>
                   </div>
                   <ToggleSwitch
@@ -431,13 +472,13 @@ export default function Settings() {
               <div className="p-2 rounded-lg bg-destructive/10">
                 <AlertTriangle className="w-4 h-4 text-destructive" />
               </div>
-              <h2 className="font-serif text-lg font-semibold text-destructive">Danger Zone</h2>
+              <h2 className="font-serif text-lg font-semibold text-destructive">{t("dangerZone")}</h2>
             </div>
 
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-destructive">Delete Account</p>
-                <p className="text-xs text-muted-foreground">Permanently delete your account and all data</p>
+                <p className="text-sm font-medium text-destructive">{t("deleteAccount")}</p>
+                <p className="text-xs text-muted-foreground">{t("deleteAccountDesc")}</p>
               </div>
               <button
                 data-testid="button-delete-account"
@@ -445,7 +486,7 @@ export default function Settings() {
                 className="px-4 py-2 rounded-xl bg-destructive text-destructive-foreground text-sm font-semibold hover:bg-destructive/90 transition-colors"
               >
                 <Trash2 className="w-4 h-4 inline mr-1.5" />
-                Delete
+                {t("delete")}
               </button>
             </div>
           </div>
@@ -460,23 +501,20 @@ export default function Settings() {
               <div className="p-2 rounded-full bg-destructive/10">
                 <AlertTriangle className="w-5 h-5 text-destructive" />
               </div>
-              <h3 className="font-serif text-xl font-bold text-destructive">Delete Account</h3>
+              <h3 className="font-serif text-xl font-bold text-destructive">{t("deleteAccount")}</h3>
             </div>
 
-            <p className="text-sm text-muted-foreground mb-4">
-              This will permanently delete your account, all your coins, comments, messages, and data.
-              This action cannot be undone.
-            </p>
+            <p className="text-sm text-muted-foreground mb-4">{t("deleteConfirmMsg")}</p>
 
             <p className="text-sm text-foreground mb-2 font-medium">
-              Type <span className="text-destructive font-bold">DELETE</span> to confirm:
+              {t("typeDeleteToConfirm")} <span className="text-destructive font-bold">{t("deleteWord")}</span> {t("toConfirm")}
             </p>
             <input
               data-testid="input-delete-confirm"
               type="text"
               value={deleteConfirmText}
               onChange={(e) => setDeleteConfirmText(e.target.value)}
-              placeholder="DELETE"
+              placeholder={t("deleteWord")}
               className="w-full bg-background border border-destructive/30 rounded-xl py-2.5 px-4 text-sm focus:outline-none focus:border-destructive focus:ring-1 focus:ring-destructive/30 mb-4"
             />
 
@@ -489,7 +527,7 @@ export default function Settings() {
                 }}
                 className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-semibold hover:bg-muted transition-colors"
               >
-                Cancel
+                {t("cancelBtn")}
               </button>
               <button
                 data-testid="button-confirm-delete"
@@ -497,7 +535,7 @@ export default function Settings() {
                 disabled={deleteConfirmText !== "DELETE" || deleteAccountMut.isPending}
                 className="flex-1 px-4 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-sm font-semibold hover:bg-destructive/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {deleteAccountMut.isPending ? "Deleting..." : "Delete Forever"}
+                {deleteAccountMut.isPending ? t("deleting") : t("deleteForever")}
               </button>
             </div>
           </div>

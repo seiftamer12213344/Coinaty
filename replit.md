@@ -15,6 +15,7 @@ Coinaty is a social network for coin collectors (numismatists). It allows users 
 - AI-powered coin chatbot (via OpenAI)
 - Email/password authentication (register + login) alongside Replit OIDC
 - Dark/light theme toggle with persistent preference
+- **Full internationalization (EN/AR/FR)** — language selector in Settings, RTL support for Arabic, all pages translated via `useLanguage()` hook from `client/src/lib/i18n.tsx`
 
 ---
 

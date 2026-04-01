@@ -5,12 +5,15 @@ import { CoinCard } from "@/components/CoinCard";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Search, Filter, X } from "lucide-react";
 import { motion } from "framer-motion";
+import { useLanguage } from "@/lib/i18n";
 
-const CATEGORIES = ["All", "Ancient", "Medieval", "Ottoman", "Kingdom of Egypt", "Modern", "Error Coins"];
+const CATEGORY_KEYS = ["all", "ancient", "medieval", "ottoman", "kingdomOfEgypt", "modern", "errorCoins"] as const;
+const CATEGORY_VALUES = ["All", "Ancient", "Medieval", "Ottoman", "Kingdom of Egypt", "Modern", "Error Coins"];
 
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  const { t } = useLanguage();
   
   const { data: coins, isLoading, error } = useCoins(
     activeCategory !== "All" ? { category: activeCategory } : undefined
@@ -33,8 +36,8 @@ export default function Home() {
       <div className="p-4 md:p-8 space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-8 hidden md:flex">
           <div>
-            <h1 className="text-4xl font-serif font-bold text-foreground mb-2">The Grand Gallery</h1>
-            <p className="text-muted-foreground">Explore curated numismatic treasures from collectors worldwide.</p>
+            <h1 className="text-4xl font-serif font-bold text-foreground mb-2">{t("theGallery")}</h1>
+            <p className="text-muted-foreground">{t("searchCoins")}</p>
           </div>
           
           <div className="relative group w-full md:w-64">
@@ -65,19 +68,22 @@ export default function Home() {
             <div className="flex items-center justify-center p-2 rounded-lg bg-white/5 border border-white/10 mr-2 md:hidden text-muted-foreground">
               <Filter className="w-4 h-4" />
             </div>
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`whitespace-nowrap px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                  activeCategory === cat 
-                    ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(212,175,55,0.3)] scale-105" 
-                    : "bg-white/5 border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/10"
-                }`}
-              >
-                {cat}
-              </button>
-            ))}
+            {CATEGORY_KEYS.map((key, i) => {
+              const val = CATEGORY_VALUES[i];
+              return (
+                <button
+                  key={val}
+                  onClick={() => setActiveCategory(val)}
+                  className={`whitespace-nowrap px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                    activeCategory === val
+                      ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(212,175,55,0.3)] scale-105" 
+                      : "bg-white/5 border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/10"
+                  }`}
+                >
+                  {t(key)}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -98,9 +104,7 @@ export default function Home() {
               {searchQuery ? "No Matches Found" : "The Vault is Empty"}
             </h3>
             <p className="text-muted-foreground max-w-md mx-auto">
-              {searchQuery
-                ? `No artifacts match "${searchQuery}". Try different keywords or clear the search.`
-                : "No artifacts found in this category. Be the first to catalog a piece of history."}
+              {searchQuery ? t("noSearchResults") : t("noCatalogMsg")}
             </p>
             {searchQuery && (
               <button

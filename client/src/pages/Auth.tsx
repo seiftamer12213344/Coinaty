@@ -4,6 +4,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { saveAuthToken } from "@/lib/authToken";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/components/ThemeProvider";
+import { useLanguage } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +22,9 @@ export default function Auth() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { resolvedTheme } = useTheme();
+  const { t } = useLanguage();
+  const logoSrc = resolvedTheme === "dark" ? logoDarkMode : logoLightMode;
 
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
@@ -48,7 +53,7 @@ export default function Auth() {
       navigate("/");
     },
     onError: (err: Error) => {
-      toast({ title: "Login failed", description: err.message, variant: "destructive" });
+      toast({ title: t("signIn"), description: err.message, variant: "destructive" });
     },
   });
 
@@ -73,7 +78,7 @@ export default function Auth() {
       navigate("/");
     },
     onError: (err: Error) => {
-      toast({ title: "Registration failed", description: err.message, variant: "destructive" });
+      toast({ title: t("createAccount"), description: err.message, variant: "destructive" });
     },
   });
 
@@ -108,27 +113,24 @@ export default function Auth() {
       </div>
 
       <div className="mb-8 flex flex-col items-center gap-4">
-        <img src={logoDarkMode} alt="Coinaty" className="h-16 w-auto object-contain hidden dark:block" />
-        <img src={logoLightMode} alt="Coinaty" className="h-16 w-auto object-contain block dark:hidden" />
+        <img src={logoSrc} alt="Coinaty" className="h-16 w-auto object-contain" />
         <a
           href="/"
           data-testid="link-back-to-gallery"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          Back to Gallery
+          {t("backToGallery")}
         </a>
       </div>
 
       <Card className="w-full max-w-md border-border/50 shadow-2xl">
         <CardHeader className="text-center space-y-1">
           <CardTitle className="text-2xl font-serif tracking-wide">
-            {mode === "login" ? "Welcome Back" : "Join the Collection"}
+            {mode === "login" ? t("welcomeBack") : t("joinTheCollection")}
           </CardTitle>
           <CardDescription>
-            {mode === "login"
-              ? "Sign in to your Coinaty account"
-              : "Create your account and start collecting"}
+            {mode === "login" ? t("signInToYourAccount") : t("createYourAccount")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -136,7 +138,7 @@ export default function Auth() {
             {mode === "register" && (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="firstName">{t("firstName")}</Label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
@@ -151,7 +153,7 @@ export default function Auth() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="lastName">{t("lastName")}</Label>
                   <Input
                     id="lastName"
                     data-testid="input-lastname"
@@ -164,7 +166,7 @@ export default function Auth() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("emailAddress")}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -181,7 +183,7 @@ export default function Auth() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t("password")}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -190,7 +192,7 @@ export default function Auth() {
                   data-testid="input-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={mode === "register" ? "Min. 6 characters" : "Your password"}
+                  placeholder={mode === "register" ? t("minSixChars") : t("yourPassword")}
                   className="pl-9"
                   required
                   minLength={mode === "register" ? 6 : undefined}
@@ -209,31 +211,31 @@ export default function Auth() {
               ) : (
                 <ArrowRight className="w-4 h-4 mr-2" />
               )}
-              {mode === "login" ? "Sign In" : "Create Account"}
+              {mode === "login" ? t("signIn") : t("createAccount")}
             </Button>
           </form>
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
             {mode === "login" ? (
               <p>
-                Don't have an account?{" "}
+                {t("noAccount")}{" "}
                 <button
                   data-testid="button-switch-register"
                   onClick={() => setMode("register")}
                   className="text-primary hover:underline font-medium"
                 >
-                  Sign up
+                  {t("registerHere")}
                 </button>
               </p>
             ) : (
               <p>
-                Already have an account?{" "}
+                {t("haveAccount")}{" "}
                 <button
                   data-testid="button-switch-login"
                   onClick={() => setMode("login")}
                   className="text-primary hover:underline font-medium"
                 >
-                  Sign in
+                  {t("signInHere")}
                 </button>
               </p>
             )}
@@ -242,7 +244,7 @@ export default function Auth() {
       </Card>
 
       <p className="mt-6 text-xs text-muted-foreground/60">
-        The Royal Museum of Numismatics
+        {t("royalMuseum")}
       </p>
     </div>
   );

@@ -2,6 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "@/components/ThemeProvider";
+import { useLanguage } from "@/lib/i18n";
 import { CoinChatbot } from "@/components/CoinChatbot";
 import logoDarkMode from "@assets/Screen_Shot_2026-03-27_at_11.55.29_AM_1774605354354.png";
 import logoLightMode from "@assets/Screen_Shot_2026-03-27_at_11.55.36_AM_1774605354357.png";
@@ -19,22 +20,25 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import type { TranslationKey } from "@/lib/i18n";
 
-const NAV_ITEMS = [
-  { href: "/", label: "The Gallery", icon: Compass },
-  { href: "/leaderboard", label: "Top Collectors", icon: Trophy },
-  { href: "/search", label: "Find Collectors", icon: Search },
-  { href: "/messages", label: "Discussions", icon: MessageSquare },
-  { href: "/profile", label: "My Vault", icon: User },
+const NAV_KEYS: { href: string; labelKey: TranslationKey; icon: any }[] = [
+  { href: "/", labelKey: "theGallery", icon: Compass },
+  { href: "/leaderboard", labelKey: "topCollectors", icon: Trophy },
+  { href: "/search", labelKey: "findCollectors", icon: Search },
+  { href: "/messages", labelKey: "discussions", icon: MessageSquare },
+  { href: "/profile", labelKey: "myVault", icon: User },
 ];
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const { resolvedTheme } = useTheme();
+  const { t } = useLanguage();
   const logoSrc = resolvedTheme === "dark" ? logoDarkMode : logoLightMode;
+
   const [collapsed, setCollapsed] = useState(() => {
-    try { return localStorage.getItem("sidebar-collapsed") === "true"; } 
+    try { return localStorage.getItem("sidebar-collapsed") === "true"; }
     catch { return false; }
   });
 
@@ -61,15 +65,16 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
         {/* Nav Items */}
         <nav className={`flex-1 py-8 space-y-2 ${collapsed ? "px-2" : "px-4"}`}>
-          {NAV_ITEMS.map((item) => {
+          {NAV_KEYS.map((item) => {
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             const Icon = item.icon;
+            const label = t(item.labelKey);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                data-testid={`nav-${item.label.toLowerCase().replace(/\s/g, "-")}`}
-                title={collapsed ? item.label : undefined}
+                data-testid={`nav-${item.labelKey}`}
+                title={collapsed ? label : undefined}
                 className={`flex items-center gap-4 px-3 py-3 rounded-xl transition-all duration-300 ${
                   collapsed ? "justify-center" : ""
                 } ${
@@ -79,7 +84,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 }`}
               >
                 <Icon className={`w-5 h-5 shrink-0 ${isActive ? "text-primary" : ""}`} />
-                {!collapsed && <span className="font-medium whitespace-nowrap">{item.label}</span>}
+                {!collapsed && <span className="font-medium whitespace-nowrap">{label}</span>}
               </Link>
             );
           })}
@@ -87,11 +92,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
           {isAuthenticated && (
             <Link
               href="/add-coin"
-              title={collapsed ? "Catalog Coin" : undefined}
+              title={collapsed ? t("catalogCoin") : undefined}
               className={`flex items-center gap-4 px-3 py-3 mt-8 rounded-xl bg-gradient-to-r from-primary/80 to-primary text-primary-foreground font-semibold shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all duration-300 ${collapsed ? "justify-center" : ""}`}
             >
               <PlusCircle className="w-5 h-5 shrink-0" />
-              {!collapsed && <span>Catalog Coin</span>}
+              {!collapsed && <span>{t("catalogCoin")}</span>}
             </Link>
           )}
         </nav>
@@ -100,7 +105,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className={`border-t border-border/50 ${collapsed ? "p-2" : "p-4"}`}>
           {!collapsed && (
             <div className="flex items-center justify-between mb-3 px-1">
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">Appearance</span>
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">{t("appearance")}</span>
               <ThemeToggle />
             </div>
           )}
@@ -114,7 +119,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <Link
               href="/settings"
               data-testid="link-settings"
-              title={collapsed ? "Settings" : undefined}
+              title={collapsed ? t("settings") : undefined}
               className={`flex items-center gap-3 w-full px-3 py-2 mb-1 rounded-xl transition-colors ${collapsed ? "justify-center" : ""} ${
                 location === "/settings"
                   ? "bg-primary/10 text-primary"
@@ -122,27 +127,27 @@ export function Shell({ children }: { children: React.ReactNode }) {
               }`}
             >
               <Settings className="w-4 h-4 shrink-0" />
-              {!collapsed && <span className="text-sm font-medium">Settings</span>}
+              {!collapsed && <span className="text-sm font-medium">{t("settings")}</span>}
             </Link>
           )}
 
           {isAuthenticated ? (
             <button
               onClick={() => logout()}
-              title={collapsed ? "Sign Out" : undefined}
+              title={collapsed ? t("signOut") : undefined}
               className={`flex items-center gap-3 w-full px-3 py-2 text-muted-foreground hover:text-destructive transition-colors ${collapsed ? "justify-center" : ""}`}
             >
               <LogOut className="w-4 h-4 shrink-0" />
-              {!collapsed && <span className="text-sm">Sign Out</span>}
+              {!collapsed && <span className="text-sm">{t("signOut")}</span>}
             </button>
           ) : (
             <button
               onClick={() => window.location.href = "/auth"}
-              title={collapsed ? "Sign In" : undefined}
+              title={collapsed ? t("signIn") : undefined}
               className={`flex items-center gap-3 w-full px-3 py-2 border border-primary/50 text-primary rounded-lg hover:bg-primary/10 transition-colors ${collapsed ? "justify-center" : ""}`}
             >
               <LogIn className="w-4 h-4 shrink-0" />
-              {!collapsed && <span className="text-sm">Sign In</span>}
+              {!collapsed && <span className="text-sm">{t("signIn")}</span>}
             </button>
           )}
 
@@ -150,11 +155,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <button
             onClick={toggleCollapsed}
             data-testid="button-collapse-sidebar"
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? t("expandSidebar") : t("collapseSidebar")}
             className={`flex items-center gap-2 w-full mt-3 px-3 py-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors text-xs ${collapsed ? "justify-center" : ""}`}
           >
             {collapsed ? <ChevronRight className="w-4 h-4 shrink-0" /> : <ChevronLeft className="w-4 h-4 shrink-0" />}
-            {!collapsed && <span>Collapse</span>}
+            {!collapsed && <span>{t("collapse")}</span>}
           </button>
         </div>
       </aside>
@@ -189,7 +194,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 onClick={() => window.location.href = "/auth"}
                 className="text-xs font-semibold text-primary"
               >
-                LOGIN
+                {t("login")}
               </button>
             )}
           </div>
@@ -203,9 +208,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
       {/* Mobile Bottom Navigation */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/90 backdrop-blur-xl border-t border-border/50 pb-safe">
         <div className="flex justify-around items-center px-2 py-2">
-          {NAV_ITEMS.map((item) => {
+          {NAV_KEYS.map((item) => {
             const isActive = location === item.href || (item.href !== "/" && location.startsWith(item.href));
             const Icon = item.icon;
+            const label = t(item.labelKey);
             return (
               <Link
                 key={item.href}
@@ -215,7 +221,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 }`}
               >
                 <Icon className={`w-5 h-5 mb-1 ${isActive ? "drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]" : ""}`} />
-                <span className="text-[10px] font-medium">{item.label.split(' ')[0]}</span>
+                <span className="text-[10px] font-medium">{label.split(' ')[0]}</span>
               </Link>
             );
           })}

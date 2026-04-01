@@ -3,9 +3,11 @@ import { Shell } from "@/components/layout/Shell";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Trophy, Medal, Crown } from "lucide-react";
 import { Link } from "wouter";
+import { useLanguage } from "@/lib/i18n";
 
 export default function Leaderboard() {
   const { data: users, isLoading } = useLeaderboard();
+  const { t } = useLanguage();
 
   return (
     <Shell>
@@ -15,7 +17,7 @@ export default function Leaderboard() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 border-2 border-primary/50 mb-2 shadow-[0_0_30px_rgba(212,175,55,0.2)]">
             <Trophy className="w-10 h-10 text-primary drop-shadow-[0_0_10px_rgba(212,175,55,0.8)]" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground">Top Collectors</h1>
+          <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground">{t("topCollectors")}</h1>
           <p className="text-muted-foreground max-w-md mx-auto">
             Recognizing the most dedicated numismatists in the realm. Points are awarded for contributions to the gallery.
           </p>
@@ -27,9 +29,9 @@ export default function Leaderboard() {
           <div className="bg-card border border-border/50 rounded-3xl overflow-hidden shadow-2xl relative">
             {/* Table Header */}
             <div className="grid grid-cols-12 gap-4 p-4 border-b border-border/50 bg-black/40 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              <div className="col-span-2 md:col-span-1 text-center">Rank</div>
-              <div className="col-span-7 md:col-span-8">Collector</div>
-              <div className="col-span-3 text-right pr-4">Prestige</div>
+              <div className="col-span-2 md:col-span-1 text-center">{t("rank")}</div>
+              <div className="col-span-7 md:col-span-8">{t("collector2")}</div>
+              <div className="col-span-3 text-right pr-4">{t("points")}</div>
             </div>
 
             {/* Rows */}

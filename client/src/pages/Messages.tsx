@@ -9,6 +9,7 @@ import { Send, Search, MessageSquare, Users, Plus, UserPlus, Bell, Check, X, Log
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { onWS } from "@/lib/websocket";
+import { useLanguage } from "@/lib/i18n";
 
 type ViewMode = "dm" | "groups";
 type CallStatus = "idle" | "calling" | "incoming" | "active";
@@ -22,6 +23,7 @@ export default function Messages() {
   const { data: pendingInvitations } = usePendingInvitations();
   const { toast } = useToast();
 
+  const { t } = useLanguage();
   const preselectedUserId = new URLSearchParams(window.location.search).get("user");
   const [activeUserId, setActiveUserId] = useState<string | null>(preselectedUserId);
   const [activeGroupId, setActiveGroupId] = useState<number | null>(null);
@@ -514,7 +516,7 @@ export default function Messages() {
             <div className="p-4 border-b border-border/50 bg-card">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-serif text-xl font-bold text-primary" data-testid="text-messages-title">
-                  {viewMode === "dm" ? "Discussions" : "Groups"}
+                  {viewMode === "dm" ? t("discussions") : t("groups")}
                 </h2>
                 <div className="flex items-center gap-2">
                   {invitationCount > 0 && (
@@ -534,12 +536,12 @@ export default function Messages() {
                 <button onClick={() => { setViewMode("dm"); setActiveGroupId(null); }}
                   className={`flex-1 py-2 text-xs font-semibold rounded-md transition-colors ${viewMode === "dm" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                   data-testid="tab-dm">
-                  <MessageSquare className="w-3 h-3 inline mr-1" />DMs
+                  <MessageSquare className="w-3 h-3 inline mr-1" />{t("dms")}
                 </button>
                 <button onClick={() => { setViewMode("groups"); setActiveUserId(null); }}
                   className={`flex-1 py-2 text-xs font-semibold rounded-md transition-colors ${viewMode === "groups" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                   data-testid="tab-groups">
-                  <Users className="w-3 h-3 inline mr-1" />Groups
+                  <Users className="w-3 h-3 inline mr-1" />{t("groups")}
                   {invitationCount > 0 && <span className="ml-1 w-4 h-4 bg-red-500 rounded-full text-[10px] text-white inline-flex items-center justify-center">{invitationCount}</span>}
                 </button>
               </div>
@@ -578,7 +580,7 @@ export default function Messages() {
                 convsLoading ? (
                   <div className="p-4 flex justify-center"><LoadingSpinner className="scale-50" /></div>
                 ) : conversations?.length === 0 ? (
-                  <p className="text-center p-8 text-sm text-muted-foreground">No active discussions.</p>
+                  <p className="text-center p-8 text-sm text-muted-foreground">{t("noDiscussions")}</p>
                 ) : (
                   conversations?.map((conv: any) => (
                     <button key={conv.id} onClick={() => setActiveUserId(conv.id)}

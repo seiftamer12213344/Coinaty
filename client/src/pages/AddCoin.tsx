@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import GlobeMap from "@/components/GlobeMap";
 import { getHistoricalEntity } from "@/data/historicalEntities";
+import { useLanguage } from "@/lib/i18n";
 
 
 // ── Interfaces ──────────────────────────────────────────────────────────────
@@ -161,6 +162,7 @@ export default function AddCoin() {
   const { user, isLoading: authLoading } = useAuth();
   const createCoin = useCreateCoin();
 
+  const { t } = useLanguage();
   const [mode, setMode] = useState<Mode>("discover");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<NumistaResult[]>([]);
@@ -667,7 +669,7 @@ export default function AddCoin() {
                 className="inline-flex items-center gap-2 px-5 py-2.5 border border-border hover:border-primary/50 bg-card hover:bg-muted rounded-xl text-sm font-medium transition-all"
               >
                 <PencilLine className="w-4 h-4" />
-                Enter Manually
+                {t("enterManually")}
               </button>
             </div>
           </div>

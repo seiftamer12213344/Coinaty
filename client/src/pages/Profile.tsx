@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/lib/i18n";
 
 export default function Profile() {
   const { id } = useParams<{ id?: string }>();
@@ -28,6 +29,7 @@ export default function Profile() {
   const { data: watchlistCoins, isLoading: watchlistLoading } = useWatchlist(isOwnProfile);
   const updateProfile = useUpdateProfile();
 
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"vault" | "wishlist">("vault");
   const [showEditModal, setShowEditModal] = useState(false);
   const [editDisplayName, setEditDisplayName] = useState("");
@@ -108,7 +110,7 @@ export default function Profile() {
                     onClick={openEditModal}
                     className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 hover:border-primary/50 hover:bg-primary/10 rounded-lg text-sm font-medium transition-all"
                   >
-                    <Edit3 className="w-4 h-4" /> Edit Profile
+                    <Edit3 className="w-4 h-4" /> {t("editProfile")}
                   </button>
                 ) : (
                   <button
@@ -116,7 +118,7 @@ export default function Profile() {
                     onClick={() => { if (!authUser) { window.location.href = "/auth"; return; } setLocation(`/messages?user=${targetId}`); }}
                     className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/30 hover:bg-primary/20 text-primary rounded-lg text-sm font-medium transition-all"
                   >
-                    <MessageSquare className="w-4 h-4" /> Start Discussion
+                    <MessageSquare className="w-4 h-4" /> {t("sendMessage")}
                   </button>
                 )}
               </div>
@@ -126,11 +128,11 @@ export default function Profile() {
             <div className="grid grid-cols-2 gap-4 border-y border-border/50 py-6 mb-6">
                <div className="text-center">
                   <p className="text-2xl font-serif font-bold text-foreground">{userCoins?.length || 0}</p>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mt-1">Artifacts</p>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mt-1">{t("coins")}</p>
                </div>
                <div className="text-center border-l border-border/50">
                   <p className="text-2xl font-serif font-bold text-foreground">{profile.points || 0}</p>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mt-1">Prestige Pts</p>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mt-1">{t("points")}</p>
                </div>
             </div>
           </div>
@@ -143,7 +145,7 @@ export default function Profile() {
               onClick={() => setActiveTab("vault")}
               className={`pb-4 font-serif text-lg tracking-wide transition-all relative ${activeTab === 'vault' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
             >
-              The Vault
+              {t("vault")}
               {activeTab === 'vault' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_8px_rgba(212,175,55,0.8)]" />}
             </button>
             <button 
@@ -152,7 +154,7 @@ export default function Profile() {
               className={`pb-4 font-serif text-lg tracking-wide transition-all relative flex items-center gap-2 ${activeTab === 'wishlist' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
             >
               <Bookmark className="w-4 h-4" />
-              Watchlist
+              {t("watchlist")}
               {isOwnProfile && watchlistCoins && watchlistCoins.length > 0 && (
                 <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-sans">
                   {watchlistCoins.length}
@@ -168,7 +170,7 @@ export default function Profile() {
                 <LoadingSpinner />
               ) : userCoins?.length === 0 ? (
                 <div className="text-center py-20 bg-card/30 rounded-2xl border border-dashed border-border/50">
-                  <p className="text-muted-foreground">The vault is currently empty.</p>
+                  <p className="text-muted-foreground">{t("noCoinsYet")}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">

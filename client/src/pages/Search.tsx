@@ -5,17 +5,19 @@ import { useSearchUsers } from "@/hooks/use-users";
 import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { Search as SearchIcon, BadgeCheck, Users } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 export default function Search() {
   const [query, setQuery] = useState("");
   const { data: results, isLoading } = useSearchUsers(query);
+  const { t } = useLanguage();
 
   return (
     <Shell>
       <div className="p-6 md:p-8 space-y-6">
         <div>
-          <h1 className="text-3xl font-serif font-bold text-foreground mb-1">Find Collectors</h1>
-          <p className="text-muted-foreground text-sm">Search the gallery's registered numismatists</p>
+          <h1 className="text-3xl font-serif font-bold text-foreground mb-1">{t("searchCollectors")}</h1>
+          <p className="text-muted-foreground text-sm">{t("searchPlaceholder2")}</p>
         </div>
 
         {/* Search Input */}
@@ -25,7 +27,7 @@ export default function Search() {
             data-testid="input-search-users"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search by display name..."
+            placeholder={t("searchPlaceholder2")}
             className="pl-12 h-12 bg-card border-border focus:border-primary text-base rounded-xl"
             autoFocus
           />
@@ -36,13 +38,13 @@ export default function Search() {
           {query.trim() === "" ? (
             <div className="text-center py-20">
               <Users className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
-              <p className="text-muted-foreground">Type a name to search collectors</p>
+              <p className="text-muted-foreground">{t("searchPlaceholder2")}</p>
             </div>
           ) : isLoading ? (
             <LoadingSpinner />
           ) : results?.length === 0 ? (
             <div className="text-center py-20 bg-card/30 rounded-2xl border border-dashed border-border/50">
-              <p className="text-muted-foreground">No collectors found for "<span className="text-foreground">{query}</span>"</p>
+              <p className="text-muted-foreground">{t("noUsersFound")}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -71,10 +73,10 @@ export default function Search() {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {user.points || 0} prestige points
+                        {user.points || 0} {t("points")}
                       </p>
                     </div>
-                    <span className="text-xs text-primary font-medium">View Vault →</span>
+                    <span className="text-xs text-primary font-medium">{t("viewProfile")} →</span>
                   </div>
                 </Link>
               ))}

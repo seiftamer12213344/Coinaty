@@ -9,6 +9,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useSettings } from "@/hooks/use-settings";
+import { useLanguage } from "@/lib/i18n";
 import { parseMeasurements, convertMeasurements } from "@/lib/measurements";
 import { motion } from "framer-motion";
 
@@ -25,6 +26,7 @@ export default function CoinDetails() {
   const toggleLike = useToggleLike();
   const createComment = useCreateComment();
   const { defaultUnits } = useSettings();
+  const { t } = useLanguage();
   
   const [newComment, setNewComment] = useState("");
   const [showReverse, setShowReverse] = useState(false);
@@ -87,7 +89,7 @@ export default function CoinDetails() {
               {/* Side label */}
               <div className="absolute bottom-4 left-4 z-20">
                 <span className="px-2.5 py-1 rounded-full bg-black/60 border border-primary/30 text-primary text-[10px] font-semibold uppercase tracking-widest">
-                  {showReverse ? "Reverse" : "Obverse"}
+                  {showReverse ? t("reverse") : t("obverse")}
                 </span>
               </div>
 
@@ -99,7 +101,7 @@ export default function CoinDetails() {
                   className="absolute bottom-4 right-4 z-20 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 border border-primary/40 text-primary hover:bg-primary/20 hover:border-primary transition-all text-xs font-semibold"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  Reverse
+                  {t("reverse")}
                 </button>
               )}
             </motion.div>
@@ -152,8 +154,8 @@ export default function CoinDetails() {
               </div>
 
               <div className="pt-6 border-t border-border/30">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Metal</p>
-                <p className="font-medium text-foreground">{coin.metalType || "Unknown"}</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{t("metal")}</p>
+                <p className="font-medium text-foreground">{coin.metalType || t("unknown")}</p>
               </div>
 
               {(() => {
@@ -162,13 +164,13 @@ export default function CoinDetails() {
                 if (!converted.weight && !converted.diameter) return null;
                 return (
                   <div className="pt-6 border-t border-border/30">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Measurements</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">{t("measurements")}</p>
                     <div className="flex gap-6 flex-wrap">
                       {converted.weight && (
                         <div className="flex items-center gap-2" data-testid="coin-weight">
                           <Weight className="w-4 h-4 text-primary/70" />
                           <div>
-                            <p className="text-xs text-muted-foreground">Weight</p>
+                            <p className="text-xs text-muted-foreground">{t("weight")}</p>
                             <p className="font-medium text-foreground">{converted.weight}</p>
                           </div>
                         </div>
@@ -177,7 +179,7 @@ export default function CoinDetails() {
                         <div className="flex items-center gap-2" data-testid="coin-diameter">
                           <Ruler className="w-4 h-4 text-primary/70" />
                           <div>
-                            <p className="text-xs text-muted-foreground">Diameter</p>
+                            <p className="text-xs text-muted-foreground">{t("diameter")}</p>
                             <p className="font-medium text-foreground">{converted.diameter}</p>
                           </div>
                         </div>
@@ -188,7 +190,7 @@ export default function CoinDetails() {
               })()}
 
               <div className="pt-6 border-t border-border/30">
-                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Cataloged By</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3">{t("catalogedBy")}</p>
                 <Link href={`/profile/${coin.userId}`} className="flex items-center gap-3 group">
                   <div className="w-12 h-12 rounded-full overflow-hidden bg-muted border-2 border-transparent group-hover:border-primary transition-all">
                      {owner?.profileImageUrl ? (
