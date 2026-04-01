@@ -34,7 +34,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { isAuthenticated, logout } = useAuth();
   const { resolvedTheme } = useTheme();
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const logoSrc = resolvedTheme === "dark" ? logoDarkMode : logoLightMode;
 
   const [collapsed, setCollapsed] = useState(() => {
@@ -54,7 +54,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col md:flex-row bg-background">
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden md:flex flex-col border-r border-border bg-card/50 backdrop-blur-xl fixed h-screen z-40 transition-all duration-300 ${collapsed ? "w-16" : "w-64"}`}
+        className={`hidden md:flex flex-col bg-card/50 backdrop-blur-xl fixed top-0 h-screen z-40 transition-all duration-300 ${collapsed ? "w-16" : "w-64"} ${isRTL ? "right-0 border-l border-border" : "left-0 border-r border-border"}`}
       >
         {/* Logo */}
         <div className={`px-2 pt-2 pb-1 overflow-hidden transition-all duration-300 ${collapsed ? "opacity-0 h-0 py-0" : "opacity-100"}`}>
@@ -158,14 +158,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
             title={collapsed ? t("expandSidebar") : t("collapseSidebar")}
             className={`flex items-center gap-2 w-full mt-3 px-3 py-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-white/5 transition-colors text-xs ${collapsed ? "justify-center" : ""}`}
           >
-            {collapsed ? <ChevronRight className="w-4 h-4 shrink-0" /> : <ChevronLeft className="w-4 h-4 shrink-0" />}
+            {isRTL
+              ? (collapsed ? <ChevronLeft className="w-4 h-4 shrink-0" /> : <ChevronRight className="w-4 h-4 shrink-0" />)
+              : (collapsed ? <ChevronRight className="w-4 h-4 shrink-0" /> : <ChevronLeft className="w-4 h-4 shrink-0" />)
+            }
             {!collapsed && <span>{t("collapse")}</span>}
           </button>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className={`flex-1 pb-20 md:pb-0 min-h-screen transition-all duration-300 ${collapsed ? "md:ml-16" : "md:ml-64"}`}>
+      <main className={`flex-1 pb-20 md:pb-0 min-h-screen transition-all duration-300 ${isRTL ? (collapsed ? "md:mr-16" : "md:mr-64") : (collapsed ? "md:ml-16" : "md:ml-64")}`}>
         {/* Mobile Header */}
         <header className="md:hidden sticky top-0 z-40 bg-card/80 backdrop-blur-xl border-b border-border/50 px-4 py-3 flex items-center justify-between">
           <Link href="/" className="block">
