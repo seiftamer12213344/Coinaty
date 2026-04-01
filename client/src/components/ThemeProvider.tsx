@@ -74,7 +74,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [theme]);
 
   const setTheme = (t: Theme) => {
+    const resolved = t === "system" ? getSystemTheme() : t;
     setThemeState(t);
+    setResolvedTheme(resolved);
+    applyTheme(resolved);
     try { localStorage.setItem(STORAGE_KEY, t); } catch {}
   };
 

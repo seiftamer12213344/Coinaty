@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useTheme } from "@/components/ThemeProvider";
 import { CoinChatbot } from "@/components/CoinChatbot";
 import logoDarkMode from "@assets/Screen_Shot_2026-03-27_at_11.55.29_AM_1774605354354.png";
 import logoLightMode from "@assets/Screen_Shot_2026-03-27_at_11.55.36_AM_1774605354357.png";
@@ -30,6 +31,8 @@ const NAV_ITEMS = [
 export function Shell({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const { user, isAuthenticated, logout } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const logoSrc = resolvedTheme === "dark" ? logoDarkMode : logoLightMode;
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem("sidebar-collapsed") === "true"; } 
     catch { return false; }
@@ -52,8 +55,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         {/* Logo */}
         <div className={`px-2 pt-2 pb-1 overflow-hidden transition-all duration-300 ${collapsed ? "opacity-0 h-0 py-0" : "opacity-100"}`}>
           <Link href="/" className="block">
-            <img src={logoDarkMode} alt="Coinaty" className="w-full h-auto object-contain rounded-xl hidden dark:block" />
-            <img src={logoLightMode} alt="Coinaty" className="w-full h-auto object-contain rounded-xl block dark:hidden" />
+            <img src={logoSrc} alt="Coinaty" className="w-full h-auto object-contain rounded-xl" />
           </Link>
         </div>
 
@@ -162,8 +164,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         {/* Mobile Header */}
         <header className="md:hidden sticky top-0 z-40 bg-card/80 backdrop-blur-xl border-b border-border/50 px-4 py-3 flex items-center justify-between">
           <Link href="/" className="block">
-            <img src={logoDarkMode} alt="Coinaty" className="h-9 w-auto object-contain rounded-lg hidden dark:block" />
-            <img src={logoLightMode} alt="Coinaty" className="h-9 w-auto object-contain rounded-lg block dark:hidden" />
+            <img src={logoSrc} alt="Coinaty" className="h-9 w-auto object-contain rounded-lg" />
           </Link>
           <div className="flex items-center gap-2">
             <ThemeToggle />
