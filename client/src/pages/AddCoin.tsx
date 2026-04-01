@@ -8,27 +8,9 @@ import {
   PencilLine, ExternalLink, CheckCircle2, ArrowLeft, ImagePlus, Link as LinkIcon,
   Map, Globe, Calendar, Coins
 } from "lucide-react";
-import { ComposableMap, Geographies, Geography, ZoomableGroup } from "react-simple-maps";
-import { getHistoricalEntity, getEntityColor } from "@/data/historicalEntities";
+import GlobeMap from "@/components/GlobeMap";
+import { getHistoricalEntity } from "@/data/historicalEntities";
 
-const GEO_URL = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
-
-const ENTITY_COLORS: Record<string, { fill: string; hover: string }> = {
-  ottoman:   { fill: "#3d2d5e", hover: "#5a4080" },
-  russian:   { fill: "#5c2233", hover: "#7a2e47" },
-  british:   { fill: "#3b1f1f", hover: "#5c2f2f" },
-  french:    { fill: "#1a3060", hover: "#254590" },
-  spanish:   { fill: "#5c2820", hover: "#7a3828" },
-  austrian:  { fill: "#1f3a50", hover: "#2d5570" },
-  german:    { fill: "#2d3844", hover: "#405260" },
-  mughal:    { fill: "#5a3f10", hover: "#7a5520" },
-  chinese:   { fill: "#5a1a1a", hover: "#7a2a2a" },
-  japanese:  { fill: "#5a1a2a", hover: "#7a2a3a" },
-  portuguese:{ fill: "#1f4a2a", hover: "#2d6a3a" },
-  persian:   { fill: "#3a1f5a", hover: "#542d80" },
-  historical:{ fill: "#2d3a4a", hover: "#405260" },
-  modern:    { fill: "#1a2a3a", hover: "#253a4a" },
-};
 
 // ── Interfaces ──────────────────────────────────────────────────────────────
 interface NumistaResult {
@@ -171,16 +153,6 @@ function yearLabel(min?: number, max?: number) {
   return `${min} – ${max}`;
 }
 
-// ── Map Color helper ──────────────────────────────────────────────────────────
-function getMapFill(countryName: string, year: number, isSelected: boolean, isHovered: boolean) {
-  if (isSelected) return "#D4AF37";
-  if (isHovered) {
-    const colorKey = getEntityColor(countryName, year);
-    return ENTITY_COLORS[colorKey]?.hover ?? "#405260";
-  }
-  const colorKey = getEntityColor(countryName, year);
-  return ENTITY_COLORS[colorKey]?.fill ?? "#1a2a3a";
-}
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function AddCoin() {
@@ -199,14 +171,12 @@ export default function AddCoin() {
 
   // Discover mode state
   const [selectedYear, setSelectedYear] = useState(1850);
-  const [hoveredCountry, setHoveredCountry] = useState<string | null>(null);
   const [hoveredEntity, setHoveredEntity] = useState<string | null>(null);
   const [selectedCountryKey, setSelectedCountryKey] = useState<string | null>(null);
   const [mapResults, setMapResults] = useState<NumistaResult[]>([]);
   const [mapSearching, setMapSearching] = useState(false);
   const [mapQuery, setMapQuery] = useState("");
   const [mapError, setMapError] = useState("");
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
   const [formData, setFormData] = useState({
     title: "",
@@ -242,13 +212,12 @@ export default function AddCoin() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query, mode]);
 
-  // ── Map click handler ───────────────────────────────────────────────────────
-  const handleMapClick = useCallback(async (geo: any) => {
-    const countryName: string = geo.properties.name;
-    const entity = getHistoricalEntity(countryName, selectedYear);
-    const q = `${entity} ${selectedYear}`;
+  // ── Globe click handler ─────────────────────────────────────────────────────
+  const handleMapClick = useCallback(async (countryName: string) => {
+    let entity = countryName;
+    try { entity = getHistoricalEntity(countryName, selectedYear); } catch {}
 
-    setSelectedCountryKey(geo.rsmKey);
+    setSelectedCountryKey(countryName);
     setMapQuery(`Coins of "${entity}" minted around ${selectedYear}`);
     setMapResults([]);
     setMapError("");
@@ -503,118 +472,15 @@ export default function AddCoin() {
                 )}
               </div>
 
-              {/* Map */}
-              <div className="relative" style={{ background: "#0a1929", height: "420px" }}>
-                <ComposableMap
-                  projection="geoMercator"
-                  projectionConfig={{ scale: 130, center: [15, 20] }}
-                  style={{ width: "100%", height: "100%" }}
-                >
-                  <ZoomableGroup zoom={1} minZoom={0.8} maxZoom={6}>
-                    <Geographies geography={GEO_URL}>
-                      {({ geographies }) =>
-                        geographies.map(geo => {
-                          const name: string = geo.properties.name;
-                          const entity = getHistoricalEntity(name, selectedYear);
-                          const isSelected = selectedCountryKey === geo.rsmKey;
-                          const isHovered = hoveredCountry === geo.rsmKey;
-                          const fill = getMapFill(name, selectedYear, isSelected, isHovered);
-
-                          return (
-                            <Geography
-                              key={geo.rsmKey}
-                              geography={geo}
-                              onMouseEnter={(evt) => {
-                                setHoveredCountry(geo.rsmKey);
-                                setHoveredEntity(entity !== name ? `${entity}` : name);
-                                const rect = (evt.currentTarget as SVGElement).closest("svg")?.getBoundingClientRect();
-                                if (rect) {
-                                  setTooltipPos({ x: evt.clientX - rect.left, y: evt.clientY - rect.top });
-                                }
-                              }}
-                              onMouseMove={(evt) => {
-                                const rect = (evt.currentTarget as SVGElement).closest("svg")?.getBoundingClientRect();
-                                if (rect) {
-                                  setTooltipPos({ x: evt.clientX - rect.left, y: evt.clientY - rect.top });
-                                }
-                              }}
-                              onMouseLeave={() => {
-                                setHoveredCountry(null);
-                                setHoveredEntity(null);
-                              }}
-                              onClick={() => handleMapClick(geo)}
-                              style={{
-                                default: {
-                                  fill,
-                                  stroke: "#0a1929",
-                                  strokeWidth: 0.4,
-                                  outline: "none",
-                                  cursor: "pointer",
-                                  transition: "fill 0.15s ease",
-                                },
-                                hover: {
-                                  fill: isSelected ? "#D4AF37" : getMapFill(name, selectedYear, false, true),
-                                  stroke: "#0a1929",
-                                  strokeWidth: 0.4,
-                                  outline: "none",
-                                  cursor: "pointer",
-                                },
-                                pressed: {
-                                  fill: "#c4a030",
-                                  stroke: "#0a1929",
-                                  strokeWidth: 0.4,
-                                  outline: "none",
-                                },
-                              }}
-                            />
-                          );
-                        })
-                      }
-                    </Geographies>
-                  </ZoomableGroup>
-                </ComposableMap>
-
-                {/* Hover tooltip */}
-                {hoveredEntity && (
-                  <div
-                    className="absolute pointer-events-none z-20 bg-black/90 text-white text-xs px-3 py-1.5 rounded-lg border border-primary/30 shadow-xl whitespace-nowrap"
-                    style={{
-                      left: Math.min(tooltipPos.x + 12, 700),
-                      top: Math.max(tooltipPos.y - 40, 8),
-                    }}
-                  >
-                    <span className="text-primary font-semibold">{hoveredEntity}</span>
-                    <span className="text-white/60 ml-2">· {selectedYear}</span>
-                  </div>
-                )}
-
-                {/* Map legend */}
-                <div className="absolute bottom-3 left-3 flex flex-wrap gap-1.5 max-w-xs">
-                  {[
-                    { key: "ottoman", label: "Ottoman" },
-                    { key: "russian", label: "Russian" },
-                    { key: "british", label: "British" },
-                    { key: "french", label: "French" },
-                    { key: "austrian", label: "Habsburg" },
-                    { key: "german", label: "German" },
-                    { key: "modern", label: "Other" },
-                  ].map(({ key, label }) => (
-                    <div key={key} className="flex items-center gap-1 bg-black/60 rounded px-1.5 py-0.5">
-                      <div className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: ENTITY_COLORS[key]?.fill }} />
-                      <span className="text-white/70 text-[10px]">{label}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Searching overlay */}
-                {mapSearching && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-                    <div className="bg-black/80 rounded-2xl px-6 py-4 flex items-center gap-3 border border-primary/30">
-                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                      <span className="text-white text-sm font-medium">Searching numismatic records…</span>
-                    </div>
-                  </div>
-                )}
+              {/* 3D Globe */}
+              <div className="relative overflow-hidden" style={{ background: "#050a12" }}>
+                <GlobeMap
+                  selectedYear={selectedYear}
+                  selectedCountry={selectedCountryKey}
+                  searching={mapSearching}
+                  onCountryClick={handleMapClick}
+                  onHoverChange={entity => setHoveredEntity(entity)}
+                />
               </div>
             </div>
 
