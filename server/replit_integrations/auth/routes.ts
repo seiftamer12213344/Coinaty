@@ -5,6 +5,7 @@ import { isAuthenticated, generateAuthToken } from "./replitAuth";
 import { db } from "../../db";
 import { users } from "@shared/schema";
 import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 export function registerAuthRoutes(app: Express): void {
   app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
@@ -35,9 +36,10 @@ export function registerAuthRoutes(app: Express): void {
         return res.status(400).json({ message: "An account with this email already exists" });
       }
 
+      const hashedPassword = await bcrypt.hash(rawPassword, 10);
       const [newUser] = await db.insert(users).values({
         email,
-        password: rawPassword,
+        password: hashedPassword,
         firstName,
         lastName: lastName || null,
         displayName: `${firstName}${lastName ? ' ' + lastName : ''}`,
@@ -67,9 +69,18 @@ export function registerAuthRoutes(app: Express): void {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      const valid = rawPassword === user.password;
+      // Support both bcrypt-hashed (new) and plaintext (legacy) passwords
+      const isBcrypt = user.password.startsWith("$2");
+      const valid = isBcrypt
+        ? await bcrypt.compare(rawPassword, user.password)
+        : rawPassword === user.password;
       if (!valid) {
         return res.status(401).json({ message: "Invalid email or password" });
+      }
+      // Migrate plaintext password to bcrypt on successful login
+      if (!isBcrypt) {
+        const hashed = await bcrypt.hash(rawPassword, 10);
+        await db.update(users).set({ password: hashed }).where(eq(users.id, user.id));
       }
 
       (req.session as any).localUser = { userId: user.id };

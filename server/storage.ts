@@ -485,7 +485,10 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
     if (!user) return false;
     if (user.password) {
-      const isValid = await bcrypt.compare(currentPassword, user.password);
+      const isBcrypt = user.password.startsWith("$2");
+      const isValid = isBcrypt
+        ? await bcrypt.compare(currentPassword, user.password)
+        : currentPassword === user.password;
       if (!isValid) return false;
     }
     const hashed = await bcrypt.hash(newPassword, 10);
