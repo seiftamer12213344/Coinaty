@@ -15,6 +15,7 @@ import Leaderboard from "./pages/Leaderboard";
 import Messages from "./pages/Messages";
 import Search from "./pages/Search";
 import Auth from "./pages/Auth";
+import Settings from "./pages/Settings";
 
 function Router() {
   return (
@@ -31,6 +32,7 @@ function Router() {
       <Route path="/leaderboard" component={Leaderboard} />
       <Route path="/messages" component={Messages} />
       <Route path="/search" component={Search} />
+      <Route path="/settings" component={Settings} />
       
       <Route component={NotFound} />
     </Switch>

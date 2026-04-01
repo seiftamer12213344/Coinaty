@@ -12,7 +12,8 @@ import {
   PlusCircle, 
   LogOut,
   LogIn,
-  Search
+  Search,
+  Settings
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -76,6 +77,20 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="text-xs text-muted-foreground uppercase tracking-wider">Appearance</span>
             <ThemeToggle />
           </div>
+          {isAuthenticated && (
+            <Link 
+              href="/settings"
+              data-testid="link-settings"
+              className={`flex items-center gap-3 w-full px-4 py-2 mb-1 rounded-xl transition-colors ${
+                location === "/settings"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              <span className="text-sm font-medium">Settings</span>
+            </Link>
+          )}
           {isAuthenticated ? (
             <button 
               onClick={() => logout()}
@@ -108,6 +123,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <Link href="/search" className="w-9 h-9 flex items-center justify-center rounded-full border border-border bg-card hover:bg-muted hover:border-primary/50 text-primary transition-all">
               <Search className="w-4 h-4" />
             </Link>
+            {isAuthenticated && (
+              <Link href="/settings" data-testid="link-mobile-settings" className="w-9 h-9 flex items-center justify-center rounded-full border border-border bg-card hover:bg-muted hover:border-primary/50 text-muted-foreground hover:text-primary transition-all">
+                <Settings className="w-4 h-4" />
+              </Link>
+            )}
             {isAuthenticated ? (
               <button 
                 onClick={() => logout()}

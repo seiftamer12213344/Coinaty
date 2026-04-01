@@ -48,6 +48,7 @@ Preferred communication style: Simple, everyday language.
 | `/leaderboard` | Leaderboard | Points-ranked user list |
 | `/messages` | Messages | DM inbox + active conversation |
 | `/search` | Search | Search users by display name |
+| `/settings` | Settings | Account security, collection preferences, privacy, notifications, danger zone |
 
 ### Backend
 
@@ -79,6 +80,8 @@ Preferred communication style: Simple, everyday language.
   - `group_members` — group membership (groupId, userId, role: admin/member)
   - `group_messages` — messages within a group (groupId, senderId, content)
   - `group_invitations` — pending/accepted/declined invitations (groupId, inviterId, inviteeId, status)
+  - `user_settings` — per-user preferences (units, grading scale, message privacy, ghost mode, email notification toggles)
+  - `blocked_users` — blocked user relationships (userId, blockedUserId)
   - `conversations` / `messages` (chat models) — used by the AI chatbot integration
 - **Migrations:** `drizzle-kit push` (`db:push` script); migration files in `./migrations/`
 - **Connection:** `DATABASE_URL` environment variable required

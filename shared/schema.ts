@@ -168,6 +168,35 @@ export const groupInvitationsRelations = relations(groupInvitations, ({ one }) =
   invitee: one(users, { fields: [groupInvitations.inviteeId], references: [users.id] }),
 }));
 
+// User Settings
+export const userSettings = pgTable("user_settings", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().unique(),
+  defaultUnits: text("default_units").notNull().default("metric"),
+  conditionScale: text("condition_scale").notNull().default("sheldon"),
+  messageRequests: text("message_requests").notNull().default("everyone"),
+  ghostMode: boolean("ghost_mode").notNull().default(false),
+  emailLikes: boolean("email_likes").notNull().default(true),
+  emailComments: boolean("email_comments").notNull().default(true),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const blockedUsers = pgTable("blocked_users", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull(),
+  blockedUserId: varchar("blocked_user_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const userSettingsRelations = relations(userSettings, ({ one }) => ({
+  user: one(users, { fields: [userSettings.userId], references: [users.id] }),
+}));
+
+export const blockedUsersRelations = relations(blockedUsers, ({ one }) => ({
+  user: one(users, { fields: [blockedUsers.userId], references: [users.id] }),
+  blockedUser: one(users, { fields: [blockedUsers.blockedUserId], references: [users.id] }),
+}));
+
 // Market Prices — eBay scraped sold listing cache
 export const marketPrices = pgTable("market_prices", {
   id: serial("id").primaryKey(),
@@ -213,3 +242,5 @@ export type GroupInvitation = typeof groupInvitations.$inferSelect;
 
 export type InsertCoin = z.infer<typeof insertCoinSchema>;
 export type CallSession = typeof callSessions.$inferSelect;
+export type UserSettings = typeof userSettings.$inferSelect;
+export type BlockedUser = typeof blockedUsers.$inferSelect;

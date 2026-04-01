@@ -538,6 +538,78 @@ export async function registerRoutes(
     } catch { res.status(500).json({ message: "Internal server error" }); }
   });
 
+  // Settings
+  app.get("/api/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const settings = await storage.getUserSettings(req.user.claims.sub);
+      res.json(settings);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.put("/api/settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const settingsSchema = z.object({
+        defaultUnits: z.enum(["metric", "imperial"]).optional(),
+        conditionScale: z.enum(["sheldon", "european", "pcgs", "ngc"]).optional(),
+        messageRequests: z.enum(["everyone", "followers"]).optional(),
+        ghostMode: z.boolean().optional(),
+        emailLikes: z.boolean().optional(),
+        emailComments: z.boolean().optional(),
+      });
+      const parsed = settingsSchema.parse(req.body);
+      const settings = await storage.updateUserSettings(req.user.claims.sub, parsed);
+      res.json(settings);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/settings/blocked", isAuthenticated, async (req: any, res) => {
+    try {
+      const blocked = await storage.getBlockedUsers(req.user.claims.sub);
+      res.json(blocked.map(b => ({ ...b, user: stripPassword(b.user) })));
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.post("/api/settings/block/:userId", isAuthenticated, async (req: any, res) => {
+    try {
+      const targetId = req.params.userId;
+      if (targetId === req.user.claims.sub) return res.status(400).json({ message: "Cannot block yourself" });
+      const block = await storage.blockUser(req.user.claims.sub, targetId);
+      res.json(block);
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.delete("/api/settings/block/:userId", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.unblockUser(req.user.claims.sub, req.params.userId);
+      res.json({ message: "User unblocked" });
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.post("/api/settings/change-password", isAuthenticated, async (req: any, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      if (!newPassword || newPassword.length < 6) return res.status(400).json({ message: "Password must be at least 6 characters" });
+      const success = await storage.changePassword(req.user.claims.sub, currentPassword || "", newPassword);
+      if (!success) return res.status(400).json({ message: "Current password is incorrect" });
+      res.json({ message: "Password changed successfully" });
+    } catch { res.status(500).json({ message: "Internal server error" }); }
+  });
+
+  app.delete("/api/settings/account", isAuthenticated, async (req: any, res) => {
+    try {
+      await storage.deleteAccount(req.user.claims.sub);
+      res.json({ message: "Account deleted" });
+    } catch (err) {
+      console.error("Delete account error:", err);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // AI Coin Expert Chatbot (streaming)
   app.post("/api/chatbot", async (req, res) => {
     try {

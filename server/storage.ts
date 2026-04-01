@@ -1,7 +1,8 @@
-import { coins, coinLikes, comments, messages, users as usersTable, watchlistItems, groups, groupMembers, groupMessages, groupInvitations, callSessions, marketPrices, type User, type Coin, type CoinLike, type Comment, type Message, type WatchlistItem, type Group, type GroupMember, type GroupMessage, type GroupInvitation, type InsertCoin, type CallSession, type MarketPrice } from "@shared/schema";
+import { coins, coinLikes, comments, messages, users as usersTable, watchlistItems, groups, groupMembers, groupMessages, groupInvitations, callSessions, marketPrices, userSettings, blockedUsers, type User, type Coin, type CoinLike, type Comment, type Message, type WatchlistItem, type Group, type GroupMember, type GroupMessage, type GroupInvitation, type InsertCoin, type CallSession, type MarketPrice, type UserSettings, type BlockedUser } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, desc, inArray, sql, ilike } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth";
+import bcrypt from "bcryptjs";
 
 function safeUser(u: User): Omit<User, "email"> {
   const { email, ...safe } = u;
@@ -50,6 +51,15 @@ export interface IStorage extends IAuthStorage {
   // Market Prices
   getMarketPrice(numistaId: string): Promise<MarketPrice | undefined>;
   upsertMarketPrice(numistaId: string, coinTitle: string, listings: { price: number; currency: string; title: string; dateSold: string }[]): Promise<MarketPrice>;
+
+  // Settings
+  getUserSettings(userId: string): Promise<UserSettings>;
+  updateUserSettings(userId: string, updates: Partial<Omit<UserSettings, 'id' | 'userId' | 'updatedAt'>>): Promise<UserSettings>;
+  getBlockedUsers(userId: string): Promise<(BlockedUser & { user: User })[]>;
+  blockUser(userId: string, blockedUserId: string): Promise<BlockedUser>;
+  unblockUser(userId: string, blockedUserId: string): Promise<void>;
+  deleteAccount(userId: string): Promise<void>;
+  changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean>;
 
   // Groups
   createGroup(name: string, createdBy: string): Promise<Group>;
@@ -416,6 +426,71 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return row;
+  }
+
+  async getUserSettings(userId: string): Promise<UserSettings> {
+    const [existing] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
+    if (existing) return existing;
+    const [created] = await db.insert(userSettings).values({ userId }).returning();
+    return created;
+  }
+
+  async updateUserSettings(userId: string, updates: Partial<Omit<UserSettings, 'id' | 'userId' | 'updatedAt'>>): Promise<UserSettings> {
+    const existing = await this.getUserSettings(userId);
+    const [updated] = await db.update(userSettings)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(userSettings.userId, userId))
+      .returning();
+    return updated;
+  }
+
+  async getBlockedUsers(userId: string): Promise<(BlockedUser & { user: User })[]> {
+    const blocks = await db.select().from(blockedUsers).where(eq(blockedUsers.userId, userId));
+    if (blocks.length === 0) return [];
+    const blockedIds = blocks.map(b => b.blockedUserId);
+    const users = await db.select().from(usersTable).where(inArray(usersTable.id, blockedIds));
+    const userMap = new Map(users.map(u => [u.id, u]));
+    return blocks.map(b => ({ ...b, user: safeUser(userMap.get(b.blockedUserId)!) as User })).filter(b => b.user);
+  }
+
+  async blockUser(userId: string, blockedUserId: string): Promise<BlockedUser> {
+    const [existing] = await db.select().from(blockedUsers)
+      .where(and(eq(blockedUsers.userId, userId), eq(blockedUsers.blockedUserId, blockedUserId)));
+    if (existing) return existing;
+    const [block] = await db.insert(blockedUsers).values({ userId, blockedUserId }).returning();
+    return block;
+  }
+
+  async unblockUser(userId: string, blockedUserId: string): Promise<void> {
+    await db.delete(blockedUsers)
+      .where(and(eq(blockedUsers.userId, userId), eq(blockedUsers.blockedUserId, blockedUserId)));
+  }
+
+  async deleteAccount(userId: string): Promise<void> {
+    await db.delete(blockedUsers).where(or(eq(blockedUsers.userId, userId), eq(blockedUsers.blockedUserId, userId)));
+    await db.delete(userSettings).where(eq(userSettings.userId, userId));
+    await db.delete(watchlistItems).where(eq(watchlistItems.userId, userId));
+    await db.delete(coinLikes).where(eq(coinLikes.userId, userId));
+    await db.delete(comments).where(eq(comments.userId, userId));
+    await db.delete(messages).where(or(eq(messages.senderId, userId), eq(messages.receiverId, userId)));
+    await db.delete(groupInvitations).where(or(eq(groupInvitations.inviterId, userId), eq(groupInvitations.inviteeId, userId)));
+    await db.delete(groupMessages).where(eq(groupMessages.senderId, userId));
+    await db.delete(groupMembers).where(eq(groupMembers.userId, userId));
+    await db.delete(callSessions).where(or(eq(callSessions.callerId, userId), eq(callSessions.receiverId, userId)));
+    await db.delete(coins).where(eq(coins.userId, userId));
+    await db.delete(usersTable).where(eq(usersTable.id, userId));
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<boolean> {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+    if (!user) return false;
+    if (user.password) {
+      const isValid = await bcrypt.compare(currentPassword, user.password);
+      if (!isValid) return false;
+    }
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await db.update(usersTable).set({ password: hashed }).where(eq(usersTable.id, userId));
+    return true;
   }
 
 }
