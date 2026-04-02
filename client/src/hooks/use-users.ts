@@ -1,6 +1,8 @@
 import { getAuthHeaders } from '@/lib/authToken';
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { api, buildUrl } from "@shared/routes";
+import { onWS } from "@/lib/websocket";
 
 export function useUserProfile(id?: string) {
   return useQuery({
@@ -50,6 +52,26 @@ export function useSearchUsers(query: string) {
       return api.users.search.responses[200].parse(await res.json());
     },
     enabled: query.trim().length > 0,
+  });
+}
+
+export function useOnlineUsers() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    return onWS("presence:update", () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users/online"] });
+    });
+  }, [queryClient]);
+
+  return useQuery({
+    queryKey: ["/api/users/online"],
+    queryFn: async () => {
+      const res = await fetch("/api/users/online", { credentials: "include", headers: getAuthHeaders() });
+      if (res.status === 401) return [];
+      if (!res.ok) throw new Error("Failed to fetch online users");
+      return res.json() as Promise<any[]>;
+    },
   });
 }
 

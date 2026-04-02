@@ -13,7 +13,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { randomUUID } from "crypto";
 import fs from "fs";
-import { sendToUser, broadcast } from "./websocket";
+import { sendToUser, broadcast, getOnlineUserIds } from "./websocket";
 
 function stripPassword<T extends Record<string, any>>(obj: T): Omit<T, 'password'> {
   const { password, ...rest } = obj;
@@ -184,6 +184,16 @@ export async function registerRoutes(
       const q = (req.query.q as string) || "";
       const users = await storage.searchUsers(q);
       res.status(200).json(stripPasswords(users));
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/users/online", isAuthenticated, async (req: any, res) => {
+    try {
+      const ids = getOnlineUserIds().filter((id) => id !== req.user.claims.sub);
+      const profiles = await Promise.all(ids.map((id) => storage.getUser(id)));
+      res.status(200).json(stripPasswords(profiles.filter(Boolean) as any[]));
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
     }

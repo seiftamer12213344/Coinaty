@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useConversations, useMessages, useSendMessage } from "@/hooks/use-messages";
-import { useUserProfile, useSearchUsers } from "@/hooks/use-users";
+import { useUserProfile, useSearchUsers, useOnlineUsers } from "@/hooks/use-users";
 import { useGroups, useGroupMessages, useGroupMembers, usePendingInvitations, useCreateGroup, useSendGroupMessage, useInviteToGroup, useRespondToInvitation, useLeaveGroup } from "@/hooks/use-groups";
 import { Shell } from "@/components/layout/Shell";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -21,6 +21,7 @@ export default function Messages() {
   const { data: conversations, isLoading: convsLoading } = useConversations();
   const { data: userGroups, isLoading: groupsLoading } = useGroups();
   const { data: pendingInvitations } = usePendingInvitations();
+  const { data: onlineUsers } = useOnlineUsers();
   const { toast } = useToast();
 
   const { t } = useLanguage();
@@ -532,6 +533,34 @@ export default function Messages() {
                   )}
                 </div>
               </div>
+              {onlineUsers && onlineUsers.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Find Collectors</p>
+                  <div className="flex gap-2.5 overflow-x-auto pb-1 custom-scrollbar">
+                    {onlineUsers.map((u: any) => (
+                      <button
+                        key={u.id}
+                        onClick={() => { setActiveUserId(u.id); setViewMode("dm"); setActiveGroupId(null); }}
+                        className="flex flex-col items-center gap-1 flex-shrink-0 group"
+                        data-testid={`button-online-user-${u.id}`}
+                        title={u.displayName || u.firstName}
+                      >
+                        <div className="relative">
+                          <div className="w-11 h-11 rounded-full bg-muted border-2 border-primary/30 overflow-hidden group-hover:border-primary transition-colors">
+                            {u.profileImageUrl
+                              ? <img src={u.profileImageUrl} alt={u.displayName} className="w-full h-full object-cover" />
+                              : <div className="w-full h-full flex items-center justify-center font-serif text-base bg-black/50">{(u.displayName || u.firstName || "?")[0].toUpperCase()}</div>
+                            }
+                          </div>
+                          <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-card" />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground group-hover:text-foreground transition-colors max-w-[44px] truncate">{u.displayName || u.firstName}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex rounded-lg bg-black/30 border border-border/30 p-1 gap-1">
                 <button onClick={() => { setViewMode("dm"); setActiveGroupId(null); }}
                   className={`flex-1 py-2 text-xs font-semibold rounded-md transition-colors ${viewMode === "dm" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}

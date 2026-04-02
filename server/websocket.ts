@@ -3,6 +3,10 @@ import type { Server } from "http";
 
 const userSockets = new Map<string, Set<WebSocket>>();
 
+export function getOnlineUserIds(): string[] {
+  return Array.from(userSockets.keys());
+}
+
 export function setupWebSocket(httpServer: Server) {
   const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
 
@@ -16,6 +20,7 @@ export function setupWebSocket(httpServer: Server) {
           userId = msg.userId;
           if (!userSockets.has(userId)) userSockets.set(userId, new Set());
           userSockets.get(userId)!.add(ws);
+          broadcast({ type: "presence:update", onlineUserIds: getOnlineUserIds() });
         }
       } catch {}
     });
@@ -23,7 +28,10 @@ export function setupWebSocket(httpServer: Server) {
     ws.on("close", () => {
       if (userId) {
         userSockets.get(userId)?.delete(ws);
-        if (userSockets.get(userId)?.size === 0) userSockets.delete(userId);
+        if (userSockets.get(userId)?.size === 0) {
+          userSockets.delete(userId);
+          broadcast({ type: "presence:update", onlineUserIds: getOnlineUserIds() });
+        }
       }
     });
 
