@@ -42,7 +42,7 @@ interface GlobeMapProps {
 }
 
 export default function GlobeMap({ selectedYear, selectedCountry, searching, onCountryClick, onHoverChange }: GlobeMapProps) {
-  const globeRef = useRef<GlobeMethods>(null);
+  const globeRef = useRef<GlobeMethods | undefined>(undefined);
   const [countries, setCountries] = useState<any[]>([]);
   const [hovered, setHovered] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);

@@ -642,7 +642,7 @@ export async function registerRoutes(
       });
 
       const stream = await openai.chat.completions.create({
-        model: "gpt-5.1",
+        model: "gpt-4o",
         stream: true,
         max_completion_tokens: 1024,
         messages: [

@@ -11,12 +11,15 @@ export function registerImageRoutes(app: Express): void {
       }
 
       const response = await openai.images.generate({
-        model: "gpt-image-1",
+        model: "dall-e-3",
         prompt,
         n: 1,
         size: size as "1024x1024" | "512x512" | "256x256",
       });
 
+      if (!response.data || !response.data[0]) {
+        throw new Error("No image data received from OpenAI");
+      }
       const imageData = response.data[0];
       res.json({
         url: imageData.url,

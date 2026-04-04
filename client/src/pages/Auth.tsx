@@ -40,10 +40,7 @@ export default function Auth() {
         credentials: "include",
         body: JSON.stringify({ email, password }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Login failed");
-      }
+
       return res.json();
     },
     onSuccess: (userData) => {
@@ -65,10 +62,7 @@ export default function Auth() {
         credentials: "include",
         body: JSON.stringify({ email, password, firstName, lastName }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Registration failed");
-      }
+
       return res.json();
     },
     onSuccess: (userData) => {
@@ -146,7 +140,7 @@ export default function Auth() {
                       data-testid="input-firstname"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="John"
+                      placeholder="omar"
                       className="pl-9"
                       required
                     />
@@ -159,7 +153,7 @@ export default function Auth() {
                     data-testid="input-lastname"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    placeholder="Doe"
+                    placeholder="tarek"
                   />
                 </div>
               </div>

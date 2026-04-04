@@ -14,7 +14,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const { t } = useLanguage();
-  
+
   const { data: coins, isLoading, error } = useCoins(
     activeCategory !== "All" ? { category: activeCategory } : undefined
   );
@@ -39,17 +39,17 @@ export default function Home() {
             <h1 className="text-4xl font-serif font-bold text-foreground mb-2">{t("theGallery")}</h1>
             <p className="text-muted-foreground">{t("searchCoins")}</p>
           </div>
-          
+
           <div className="relative group w-full md:w-64">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
               <Search className="w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
             </div>
-            <input 
+            <input
               type="text"
               data-testid="input-gallery-search"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search catalog..." 
+              placeholder="Search for a coin..."
               className="w-full bg-black/40 border border-border/50 rounded-xl py-2.5 pl-10 pr-9 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all"
             />
             {searchQuery && (
@@ -74,11 +74,10 @@ export default function Home() {
                 <button
                   key={val}
                   onClick={() => setActiveCategory(val)}
-                  className={`whitespace-nowrap px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                    activeCategory === val
-                      ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(212,175,55,0.3)] scale-105" 
-                      : "bg-white/5 border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/10"
-                  }`}
+                  className={`whitespace-nowrap px-5 py-2 rounded-full text-sm font-medium transition-all duration-300 ${activeCategory === val
+                    ? "bg-primary text-primary-foreground shadow-[0_0_15px_rgba(212,175,55,0.3)] scale-105"
+                    : "bg-white/5 border border-white/10 text-muted-foreground hover:text-foreground hover:bg-white/10"
+                    }`}
                 >
                   {t(key)}
                 </button>
@@ -93,7 +92,7 @@ export default function Home() {
           </div>
         ) : error ? (
           <div className="text-center py-20 bg-destructive/10 border border-destructive/30 rounded-2xl">
-            <p className="text-destructive font-medium">Failed to load the gallery. Please try again.</p>
+            <p className="text-destructive font-large">Failed to load the gallery. Please try again.</p>
           </div>
         ) : filteredCoins.length === 0 ? (
           <div className="text-center py-32 border border-dashed border-border/50 rounded-2xl bg-black/20">

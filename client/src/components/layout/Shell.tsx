@@ -7,12 +7,12 @@ import { CoinChatbot } from "@/components/CoinChatbot";
 import logoDarkMode from "@assets/Screen_Shot_2026-03-27_at_11.55.29_AM_1774605354354.png";
 import logoLightMode from "@assets/Screen_Shot_2026-03-27_at_11.55.36_AM_1774605354357.png";
 import { useState } from "react";
-import { 
-  Compass, 
-  User, 
-  MessageSquare, 
-  Trophy, 
-  PlusCircle, 
+import {
+  Compass,
+  User,
+  MessageSquare,
+  Trophy,
+  PlusCircle,
   LogOut,
   LogIn,
   Search,
@@ -45,7 +45,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const toggleCollapsed = () => {
     setCollapsed(prev => {
       const next = !prev;
-      try { localStorage.setItem("sidebar-collapsed", String(next)); } catch {}
+      try { localStorage.setItem("sidebar-collapsed", String(next)); } catch { }
       return next;
     });
   };
@@ -75,13 +75,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 href={item.href}
                 data-testid={`nav-${item.labelKey}`}
                 title={collapsed ? label : undefined}
-                className={`flex items-center gap-4 px-3 py-3 rounded-xl transition-all duration-300 ${
-                  collapsed ? "justify-center" : ""
-                } ${
-                  isActive
+                className={`flex items-center gap-4 px-3 py-3 rounded-xl transition-all duration-300 ${collapsed ? "justify-center" : ""
+                  } ${isActive
                     ? "bg-primary/10 text-primary border border-primary/30 shadow-[0_0_15px_rgba(212,175,55,0.1)]"
                     : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
-                }`}
+                  }`}
               >
                 <Icon className={`w-5 h-5 shrink-0 ${isActive ? "text-primary" : ""}`} />
                 {!collapsed && <span className="font-medium whitespace-nowrap">{label}</span>}
@@ -120,11 +118,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
               href="/settings"
               data-testid="link-settings"
               title={collapsed ? t("settings") : undefined}
-              className={`flex items-center gap-3 w-full px-3 py-2 mb-1 rounded-xl transition-colors ${collapsed ? "justify-center" : ""} ${
-                location === "/settings"
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-              }`}
+              className={`flex items-center gap-3 w-full px-3 py-2 mb-1 rounded-xl transition-colors ${collapsed ? "justify-center" : ""} ${location === "/settings"
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                }`}
             >
               <Settings className="w-4 h-4 shrink-0" />
               {!collapsed && <span className="text-sm font-medium">{t("settings")}</span>}
@@ -219,9 +216,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center w-16 h-12 rounded-lg transition-colors ${
-                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`flex flex-col items-center justify-center w-16 h-12 rounded-lg transition-colors ${isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 <Icon className={`w-5 h-5 mb-1 ${isActive ? "drop-shadow-[0_0_8px_rgba(212,175,55,0.5)]" : ""}`} />
                 <span className="text-[10px] font-medium">{label.split(' ')[0]}</span>

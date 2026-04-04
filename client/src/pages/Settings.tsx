@@ -53,14 +53,12 @@ function ToggleSwitch({
     <button
       data-testid={`toggle-${checked ? "on" : "off"}`}
       onClick={() => !disabled && onChange(!checked)}
-      className={`relative w-11 h-6 rounded-full transition-colors ${
-        checked ? "bg-primary" : "bg-muted-foreground/30"
-      } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+      className={`relative w-11 h-6 rounded-full transition-colors ${checked ? "bg-primary" : "bg-muted-foreground/30"
+        } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
     >
       <div
-        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform ${
-          checked ? "translate-x-[22px]" : "translate-x-0.5"
-        }`}
+        className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-transform ${checked ? "translate-x-[22px]" : "translate-x-0.5"
+          }`}
       />
     </button>
   );
@@ -203,11 +201,10 @@ export default function Settings() {
                     key={lang.code}
                     data-testid={`button-lang-${lang.code}`}
                     onClick={() => setLanguage(lang.code)}
-                    className={`px-3 py-1.5 text-xs font-semibold transition-colors flex items-center gap-1 ${
-                      language === lang.code
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-muted-foreground hover:text-foreground"
-                    }`}
+                    className={`px-3 py-1.5 text-xs font-semibold transition-colors flex items-center gap-1 ${language === lang.code
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                      }`}
                   >
                     <span>{lang.flag}</span>
                     <span>{lang.label}</span>
@@ -288,22 +285,20 @@ export default function Settings() {
                   <button
                     data-testid="button-units-metric"
                     onClick={() => updateSettings.mutate({ defaultUnits: "metric" })}
-                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      settings?.defaultUnits === "metric"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-muted-foreground hover:text-foreground"
-                    }`}
+                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${settings?.defaultUnits === "metric"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                      }`}
                   >
                     mm / g
                   </button>
                   <button
                     data-testid="button-units-imperial"
                     onClick={() => updateSettings.mutate({ defaultUnits: "imperial" })}
-                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      settings?.defaultUnits === "imperial"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-muted-foreground hover:text-foreground"
-                    }`}
+                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${settings?.defaultUnits === "imperial"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                      }`}
                   >
                     in / oz
                   </button>
@@ -350,22 +345,20 @@ export default function Settings() {
                   <button
                     data-testid="button-messages-everyone"
                     onClick={() => updateSettings.mutate({ messageRequests: "everyone" })}
-                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      settings?.messageRequests === "everyone"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-muted-foreground hover:text-foreground"
-                    }`}
+                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${settings?.messageRequests === "everyone"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                      }`}
                   >
                     {t("everyone")}
                   </button>
                   <button
                     data-testid="button-messages-followers"
                     onClick={() => updateSettings.mutate({ messageRequests: "followers" })}
-                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      settings?.messageRequests === "followers"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-muted-foreground hover:text-foreground"
-                    }`}
+                    className={`px-3 py-1.5 text-xs font-semibold transition-colors ${settings?.messageRequests === "followers"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-background text-muted-foreground hover:text-foreground"
+                      }`}
                   >
                     {t("onlyFollowers")}
                   </button>

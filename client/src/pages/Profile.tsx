@@ -20,7 +20,7 @@ export default function Profile() {
   const [, setLocation] = useLocation();
   const { user: authUser } = useAuth();
   const { toast } = useToast();
-  
+
   const targetId = id || authUser?.id;
   const isOwnProfile = targetId === authUser?.id;
 
@@ -59,7 +59,7 @@ export default function Profile() {
   };
 
   if (profileLoading) return <Shell><div className="pt-32"><LoadingSpinner /></div></Shell>;
-  
+
   if (!profile) return (
     <Shell>
       <div className="p-8 text-center pt-32">
@@ -71,25 +71,25 @@ export default function Profile() {
   return (
     <Shell>
       <div className="p-0 md:p-8 space-y-6">
-        
+
         {/* Profile Header Card */}
         <div className="bg-card md:rounded-3xl border-b md:border border-border/50 overflow-hidden">
           <div className="h-32 md:h-48 bg-gradient-to-r from-black via-[#2a220e] to-black relative border-b border-primary/20">
             <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary via-transparent to-transparent" />
           </div>
-          
+
           <div className="px-6 md:px-10 pb-8 relative">
             <div className="flex flex-col md:flex-row gap-6 md:items-end -mt-16 md:-mt-20 mb-6">
               <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-card bg-muted overflow-hidden relative shadow-2xl z-10 gold-border-glow">
-                 {profile.profileImageUrl ? (
-                    <img src={profile.profileImageUrl} alt={profile.displayName || "Profile"} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center font-serif text-5xl bg-black/80 text-primary">
-                      {(profile.displayName || "C")[0].toUpperCase()}
-                    </div>
-                  )}
+                {profile.profileImageUrl ? (
+                  <img src={profile.profileImageUrl} alt={profile.displayName || "Profile"} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center font-serif text-5xl bg-black/80 text-primary">
+                    {(profile.displayName || "C")[0].toUpperCase()}
+                  </div>
+                )}
               </div>
-              
+
               <div className="flex-1 pb-2">
                 <div className="flex items-center gap-3 mb-1">
                   <h1 className="text-3xl font-serif font-bold text-foreground">{profile.displayName || "Anonymous Collector"}</h1>
@@ -126,14 +126,14 @@ export default function Profile() {
 
             {/* Stats Row */}
             <div className="grid grid-cols-2 gap-4 border-y border-border/50 py-6 mb-6">
-               <div className="text-center">
-                  <p className="text-2xl font-serif font-bold text-foreground">{userCoins?.length || 0}</p>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mt-1">{t("coins")}</p>
-               </div>
-               <div className="text-center border-l border-border/50">
-                  <p className="text-2xl font-serif font-bold text-foreground">{profile.points || 0}</p>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mt-1">{t("points")}</p>
-               </div>
+              <div className="text-center">
+                <p className="text-2xl font-serif font-bold text-foreground">{userCoins?.length || 0}</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mt-1">{t("coins")}</p>
+              </div>
+              <div className="text-center border-l border-border/50">
+                <p className="text-2xl font-serif font-bold text-foreground">{profile.points || 0}</p>
+                <p className="text-xs uppercase tracking-wider text-muted-foreground mt-1">{t("points")}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -141,14 +141,14 @@ export default function Profile() {
         {/* Tabs */}
         <div className="px-4 md:px-0">
           <div className="flex items-center gap-8 border-b border-border/50 mb-6">
-            <button 
+            <button
               onClick={() => setActiveTab("vault")}
               className={`pb-4 font-serif text-lg tracking-wide transition-all relative ${activeTab === 'vault' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
             >
               {t("vault")}
               {activeTab === 'vault' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary shadow-[0_0_8px_rgba(212,175,55,0.8)]" />}
             </button>
-            <button 
+            <button
               data-testid="tab-wishlist"
               onClick={() => setActiveTab("wishlist")}
               className={`pb-4 font-serif text-lg tracking-wide transition-all relative flex items-center gap-2 ${activeTab === 'wishlist' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}

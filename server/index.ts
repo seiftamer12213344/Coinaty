@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -107,7 +108,7 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  const PORT = Number(process.env.PORT) || 5000;
+  const PORT = Number(process.env.PORT) || 8000;
 
   httpServer.listen(PORT, "0.0.0.0", () => {
     log(`Server is active on port ${PORT}`);
