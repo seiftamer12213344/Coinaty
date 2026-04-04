@@ -8,6 +8,7 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
 import crypto from "crypto";
+import { pool } from "../../db";
 
 // ── Token helpers ─────────────────────────────────────────────────────────────
 export function generateAuthToken(userId: string): string {
@@ -38,7 +39,7 @@ export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
+    pool: pool,
     createTableIfMissing: false,
     ttl: sessionTtl,
     tableName: "sessions",
@@ -83,6 +84,25 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  passport.serializeUser((user: Express.User, cb) => cb(null, user));
+  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+
+  // Skip Replit OIDC auth when running locally (no REPL_ID)
+  if (!process.env.REPL_ID) {
+    console.log("[auth] REPL_ID not set — Replit OIDC auth disabled (local dev mode)");
+
+    app.get("/api/login", (_req, res) => {
+      res.status(501).json({ message: "Auth not available in local dev mode" });
+    });
+    app.get("/api/callback", (_req, res) => {
+      res.redirect("/");
+    });
+    app.get("/api/logout", (_req, res) => {
+      res.redirect("/");
+    });
+    return;
+  }
+
   const config = await getOidcConfig();
 
   const verify: VerifyFunction = async (
@@ -115,9 +135,6 @@ export async function setupAuth(app: Express) {
       registeredStrategies.add(strategyName);
     }
   };
-
-  passport.serializeUser((user: Express.User, cb) => cb(null, user));
-  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
     ensureStrategy(req.hostname);

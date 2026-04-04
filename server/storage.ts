@@ -4,9 +4,8 @@ import { eq, and, or, desc, inArray, sql, ilike } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth";
 import bcrypt from "bcryptjs";
 
-function safeUser(u: User): Omit<User, "email"> {
-  const { email, ...safe } = u;
-  return safe;
+function safeUser(u: User): User {
+  return { ...u, email: null };
 }
 
 export interface IStorage extends IAuthStorage {
@@ -333,7 +332,10 @@ export class DatabaseStorage implements IStorage {
     const userIds = members.map(m => m.userId);
     const memberUsers = await db.select().from(usersTable).where(inArray(usersTable.id, userIds));
     const userMap = new Map(memberUsers.map(u => [u.id, u]));
-    return members.map(m => ({ ...m, user: safeUser(userMap.get(m.userId)!) })).filter(m => m.user);
+    return members.map(m => {
+      const user = userMap.get(m.userId);
+      return user ? { ...m, user: safeUser(user) } : null;
+    }).filter((m): m is (GroupMember & { user: User }) => m !== null);
   }
 
   async isGroupMember(groupId: number, userId: string): Promise<boolean> {
@@ -347,10 +349,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(groupMessages.groupId, groupId))
       .orderBy(groupMessages.createdAt);
     if (msgs.length === 0) return [];
-    const senderIds = [...new Set(msgs.map(m => m.senderId))];
+    const senderIds = Array.from(new Set(msgs.map(m => m.senderId)));
     const senders = await db.select().from(usersTable).where(inArray(usersTable.id, senderIds));
     const senderMap = new Map(senders.map(u => [u.id, u]));
-    return msgs.map(m => ({ ...m, sender: safeUser(senderMap.get(m.senderId)!) })).filter(m => m.sender);
+    return msgs.map(m => {
+      const sender = senderMap.get(m.senderId);
+      return sender ? { ...m, sender: safeUser(sender) } : null;
+    }).filter((m): m is (GroupMessage & { sender: User }) => m !== null);
   }
 
   async sendGroupMessage(groupId: number, senderId: string, content: string): Promise<GroupMessage> {
@@ -374,13 +379,17 @@ export class DatabaseStorage implements IStorage {
     const invs = await db.select().from(groupInvitations)
       .where(and(eq(groupInvitations.inviteeId, userId), eq(groupInvitations.status, "pending")));
     if (invs.length === 0) return [];
-    const groupIds = [...new Set(invs.map(i => i.groupId))];
-    const inviterIds = [...new Set(invs.map(i => i.inviterId))];
+    const groupIds = Array.from(new Set(invs.map(i => i.groupId)));
+    const inviterIds = Array.from(new Set(invs.map(i => i.inviterId)));
     const grps = await db.select().from(groups).where(inArray(groups.id, groupIds));
     const inviters = await db.select().from(usersTable).where(inArray(usersTable.id, inviterIds));
     const groupMap = new Map(grps.map(g => [g.id, g]));
     const inviterMap = new Map(inviters.map(u => [u.id, u]));
-    return invs.map(i => ({ ...i, group: groupMap.get(i.groupId)!, inviter: safeUser(inviterMap.get(i.inviterId)!) })).filter(i => i.group && i.inviter);
+    return invs.map(i => {
+      const g = groupMap.get(i.groupId);
+      const inviter = inviterMap.get(i.inviterId);
+      return (g && inviter) ? { ...i, group: g, inviter: safeUser(inviter) } : null;
+    }).filter((i): i is (GroupInvitation & { group: Group; inviter: User }) => i !== null);
   }
 
   async respondToInvitation(invitationId: number, userId: string, accept: boolean): Promise<void> {
@@ -450,7 +459,10 @@ export class DatabaseStorage implements IStorage {
     const blockedIds = blocks.map(b => b.blockedUserId);
     const users = await db.select().from(usersTable).where(inArray(usersTable.id, blockedIds));
     const userMap = new Map(users.map(u => [u.id, u]));
-    return blocks.map(b => ({ ...b, user: safeUser(userMap.get(b.blockedUserId)!) as User })).filter(b => b.user);
+    return blocks.map(b => {
+      const user = userMap.get(b.blockedUserId);
+      return user ? { ...b, user: safeUser(user) as User } : null;
+    }).filter((b): b is (BlockedUser & { user: User }) => b !== null);
   }
 
   async blockUser(userId: string, blockedUserId: string): Promise<BlockedUser> {

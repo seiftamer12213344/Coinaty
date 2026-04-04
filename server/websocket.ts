@@ -13,9 +13,10 @@ export function setupWebSocket(httpServer: Server) {
       try {
         const msg = JSON.parse(data.toString());
         if (msg.type === "auth" && msg.userId) {
-          userId = msg.userId;
-          if (!userSockets.has(userId)) userSockets.set(userId, new Set());
-          userSockets.get(userId)!.add(ws);
+          const id = msg.userId as string;
+          userId = id;
+          if (!userSockets.has(id)) userSockets.set(id, new Set());
+          userSockets.get(id)!.add(ws);
         }
       } catch {}
     });

@@ -1,5 +1,5 @@
 import pLimit from "p-limit";
-import pRetry from "p-retry";
+import pRetry, { AbortError } from "p-retry";
 
 /**
  * Batch Processing Utilities
@@ -17,7 +17,7 @@ import pRetry from "p-retry";
  *   async (artwork) => {
  *     // Your custom LLM logic here
  *     const response = await openai.chat.completions.create({
- *       model: "gpt-5.1",
+ *       model: "gpt-4o",
  *       messages: [{ role: "user", content: `Categorize: ${artwork.name}` }],
  *       response_format: { type: "json_object" },
  *     });
@@ -69,7 +69,7 @@ export function isRateLimitError(error: unknown): boolean {
  *   csvRows,
  *   async (row) => {
  *     const response = await openai.chat.completions.create({
- *       model: "gpt-5.1", // the newest OpenAI model
+ *       model: "gpt-4o", // the newest OpenAI model
  *       messages: [{ role: "user", content: `Categorize artwork: ${row.name}` }],
  *       response_format: { type: "json_object" },
  *     });
@@ -107,7 +107,7 @@ export async function batchProcess<T, R>(
               throw error; // Rethrow to trigger p-retry
             }
             // For non-rate-limit errors, abort immediately
-            throw new pRetry.AbortError(
+            throw new AbortError(
               error instanceof Error ? error : new Error(String(error))
             );
           }
@@ -156,7 +156,7 @@ export async function batchProcessWithSSE<T, R>(
           factor: 2,
           onFailedAttempt: (error) => {
             if (!isRateLimitError(error)) {
-              throw new pRetry.AbortError(
+              throw new AbortError(
                 error instanceof Error ? error : new Error(String(error))
               );
             }

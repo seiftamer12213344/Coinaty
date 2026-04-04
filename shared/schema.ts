@@ -244,3 +244,5 @@ export type InsertCoin = z.infer<typeof insertCoinSchema>;
 export type CallSession = typeof callSessions.$inferSelect;
 export type UserSettings = typeof userSettings.$inferSelect;
 export type BlockedUser = typeof blockedUsers.$inferSelect;
+
+export * from "./models/chat";

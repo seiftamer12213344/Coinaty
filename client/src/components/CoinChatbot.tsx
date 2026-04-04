@@ -57,11 +57,10 @@ function MessageBubble({ msg, isStreaming }: { msg: ChatMessage; isStreaming?: b
         {/* Text bubble — only render if there's text */}
         {msg.content && (
           <div
-            className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-              isUser
-                ? "bg-primary text-primary-foreground rounded-br-sm"
-                : "bg-card border border-border/60 text-foreground rounded-bl-sm"
-            }`}
+            className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${isUser
+              ? "bg-primary text-primary-foreground rounded-br-sm"
+              : "bg-card border border-border/60 text-foreground rounded-bl-sm"
+              }`}
           >
             {lines.map((line, i) => {
               const isBullet = line.match(/^[-•*]\s/);
@@ -190,11 +189,11 @@ export function CoinChatbot() {
             if (evt.done) {
               if (!open) setUnread(u => u + 1);
             }
-          } catch {}
+          } catch { }
         }
       }
     } catch {
-      setError("Numis is temporarily unavailable. Please try again.");
+      setError("MR coins is now in his break. Please try again. 😅");
       setMessages(prev => prev.slice(0, -1));
     } finally {
       setIsLoading(false);
@@ -219,11 +218,10 @@ export function CoinChatbot() {
       <button
         data-testid="button-chatbot-toggle"
         onClick={() => setOpen(o => !o)}
-        className={`fixed bottom-24 md:bottom-6 z-50 w-14 h-14 rounded-full shadow-xl transition-all duration-300 flex items-center justify-center group ${isRTL ? "left-4 md:left-6" : "right-4 md:right-6"} ${
-          open
-            ? "bg-muted border border-border text-muted-foreground hover:text-foreground"
-            : "bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-0.5"
-        }`}
+        className={`fixed bottom-24 md:bottom-6 z-50 w-14 h-14 rounded-full shadow-xl transition-all duration-300 flex items-center justify-center group ${isRTL ? "left-4 md:left-6" : "right-4 md:right-6"} ${open
+          ? "bg-muted border border-border text-muted-foreground hover:text-foreground"
+          : "bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-0.5"
+          }`}
         aria-label={open ? "Close chatbot" : "Open AI coin expert"}
       >
         {open ? (
@@ -242,9 +240,8 @@ export function CoinChatbot() {
 
       {/* Chat Panel */}
       <div
-        className={`fixed bottom-40 md:bottom-24 z-50 w-[calc(100vw-2rem)] max-w-sm transition-all duration-300 ${isRTL ? "left-4 md:left-6 origin-bottom-left" : "right-4 md:right-6 origin-bottom-right"} ${
-          open ? "scale-100 opacity-100 pointer-events-auto" : "scale-95 opacity-0 pointer-events-none"
-        }`}
+        className={`fixed bottom-40 md:bottom-24 z-50 w-[calc(100vw-2rem)] max-w-sm transition-all duration-300 ${isRTL ? "left-4 md:left-6 origin-bottom-left" : "right-4 md:right-6 origin-bottom-right"} ${open ? "scale-100 opacity-100 pointer-events-auto" : "scale-95 opacity-0 pointer-events-none"
+          }`}
       >
         <div className="bg-card border border-border/60 rounded-3xl shadow-2xl flex flex-col overflow-hidden" style={{ height: "520px" }}>
 
@@ -255,7 +252,7 @@ export function CoinChatbot() {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <span className="font-serif font-bold text-sm text-foreground">Numis</span>
+                <span className="font-serif font-bold text-sm text-foreground">MR coins</span>
                 <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
                   <Sparkles className="w-2.5 h-2.5" /> AI Expert
                 </span>
@@ -282,7 +279,7 @@ export function CoinChatbot() {
                 <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mb-4 gold-border-glow">
                   <Bot className="w-8 h-8 text-primary" />
                 </div>
-                <p className="font-serif text-base font-bold text-foreground mb-1">Ask Numis</p>
+                <p className="font-serif text-base font-bold text-foreground mb-1">Ask MR coins</p>
                 <p className="text-xs text-muted-foreground mb-5">
                   Your AI companion for all things numismatic — grading, history, valuation, authentication, and more.
                   <br />
@@ -376,11 +373,10 @@ export function CoinChatbot() {
               onClick={() => fileRef.current?.click()}
               disabled={isLoading}
               title="Attach a coin photo"
-              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all flex-shrink-0 disabled:opacity-40 ${
-                pendingImage
-                  ? "bg-primary/15 border-primary/50 text-primary"
-                  : "bg-background border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
-              }`}
+              className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all flex-shrink-0 disabled:opacity-40 ${pendingImage
+                ? "bg-primary/15 border-primary/50 text-primary"
+                : "bg-background border-border text-muted-foreground hover:border-primary/50 hover:text-primary"
+                }`}
             >
               <Plus className="w-4 h-4" />
             </button>

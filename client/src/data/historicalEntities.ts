@@ -19,8 +19,8 @@ export const HISTORICAL_PERIODS: HistoricalPeriod[] = [
   { name: "Kingdom of Iraq", startYear: 1932, endYear: 1958, countries: ["Iraq"] },
   { name: "Ottoman Libya", startYear: 1551, endYear: 1911, countries: ["Libya"] },
   { name: "Ottoman Arabia", startYear: 1517, endYear: 1918, countries: ["Yemen", "Kuwait", "Qatar", "Bahrain"] },
-  { name: "Ottoman Levant", startYear: 1516, endYear: 1918, countries: ["Israel", "Palestinian Territories"] },
-  { name: "British Mandate of Palestine", startYear: 1920, endYear: 1948, countries: ["Israel"] },
+  { name: "Ottoman Levant", startYear: 1516, endYear: 1918, countries: ["Palestine", "Palestinian Territories"] },
+  { name: "British Mandate of Palestine", startYear: 1920, endYear: 1948, countries: ["Palestine"] },
 
   // ── AUSTRIA / HABSBURG ─────────────────────────────────────────────────────
   { name: "Habsburg Monarchy", startYear: 1526, endYear: 1804, countries: ["Austria", "Hungary", "Czech Republic", "Slovakia", "Slovenia", "Croatia", "Romania", "Ukraine", "Belgium", "Luxembourg"] },
