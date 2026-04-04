@@ -19,7 +19,7 @@ export default function Leaderboard() {
           </div>
           <h1 className="text-4xl md:text-5xl font-serif font-bold text-foreground">{t("topCollectors")}</h1>
           <p className="text-muted-foreground max-w-md mx-auto">
-            Recognizing the most dedicated coin-man in the realm. Points are awarded for contributions to the gallery.
+            Recognizing the strongest coin-man in the realm. Points are awarded for contributions to the gallery.
           </p>
         </div>
 
