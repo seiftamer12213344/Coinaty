@@ -193,6 +193,7 @@ export default function AddCoin() {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    personalInfo: "",
     category: "Ottoman",
     photoUrl: "",
     backPhotoUrl: "",
@@ -286,6 +287,7 @@ export default function AddCoin() {
       setFormData({
         title: detail.title,
         description: "",
+        personalInfo: "",
         category,
         photoUrl: detail.obverse?.thumbnail || "",
         backPhotoUrl: detail.reverse?.thumbnail || "",
@@ -298,7 +300,7 @@ export default function AddCoin() {
       setCoinPreview(preview);
       setMode("selected");
     } catch {
-      setFormData(prev => ({ ...prev, title: coin.title, numistaId: coin.id }));
+      setFormData(prev => ({ ...prev, title: coin.title, numistaId: coin.id, description: "", personalInfo: "" }));
       setCoinPreview({});
       setMode("selected");
     } finally {
@@ -319,6 +321,10 @@ export default function AddCoin() {
       ...formData,
       photoUrl: finalPhotoUrl,
       backPhotoUrl: formData.backPhotoUrl.trim() || undefined,
+      description: [coinPreview.issuedBy, coinPreview.yearLabel, coinPreview.composition, coinPreview.weight, coinPreview.diameter]
+        .filter(Boolean)
+        .join(" "),
+      personalInfo: formData.personalInfo,
     }, {
       onSuccess: () => setLocation("/"),
       onError: (err: Error) => {
@@ -347,7 +353,7 @@ export default function AddCoin() {
     setMapQuery("");
     setMapError("");
     setSelectedCountryKey(null);
-    setFormData({ title: "", description: "", category: "Ottoman", photoUrl: "", backPhotoUrl: "", metalType: "Silver", numistaId: "" });
+    setFormData({ title: "", description: "", personalInfo: "", category: "Ottoman", photoUrl: "", backPhotoUrl: "", metalType: "Silver", numistaId: "" });
   };
 
   if (authLoading) return null;
@@ -798,8 +804,8 @@ export default function AddCoin() {
                 )}
                 <textarea
                   required={mode === "selected" || mode === "manual"}
-                  name="description"
-                  value={formData.description}
+                  name="personalInfo"
+                  value={formData.personalInfo}
                   onChange={handleChange}
                   rows={3}
                   placeholder="Add your personal notes, condition grade, provenance..."

@@ -28,7 +28,6 @@ export function CoinCard({ coin }: { coin: Coin }) {
   const isOwner = user?.id === coin.userId;
   const isWatchlisted = watchlistStatus?.inWatchlist || false;
   const numistaLink = `https://en.numista.com/catalogue/index.php?e=&r=${encodeURIComponent(coin.title)}`;
-  const coinInfo = coin.description?.trim() || "Numista details unavailable.";
 
   const getMetalGlow = (metal: string | null) => {
     if (!metal) return "border-border/30";
@@ -166,7 +165,7 @@ export function CoinCard({ coin }: { coin: Coin }) {
             {coin.title}
           </h3>
         </Link>
-        <p className="text-muted-foreground text-sm line-clamp-2 mb-4 leading-relaxed" data-testid={`text-coin-info-${coin.id}`}>
+        <p className="text-muted-foreground text-sm line-clamp-2 mb-4 leading-relaxed">
           {coin.description}
         </p>
 
