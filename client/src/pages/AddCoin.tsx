@@ -780,14 +780,8 @@ export default function AddCoin() {
                 <textarea
                   required={mode === "manual"}
                   name="description"
-                  value={mode === "selected" ? "" : formData.description}
-                  onChange={e => {
-                    if (mode === "selected") {
-                      setFormData(prev => ({ ...prev, description: prev.description + (prev.description ? " " : "") + e.target.value }));
-                    } else {
-                      handleChange(e);
-                    }
-                  }}
+                  value={formData.description}
+                  onChange={handleChange}
                   rows={3}
                   placeholder={mode === "selected"
                     ? "Add your personal notes, condition grade, provenance..."
