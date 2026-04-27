@@ -32,6 +32,14 @@ interface NumistaDetail extends NumistaResult {
   reverse?: { thumbnail?: string; picture?: string };
 }
 
+interface CoinPreview {
+  issuedBy?: string;
+  yearLabel?: string;
+  composition?: string;
+  weight?: string;
+  diameter?: string;
+}
+
 type Mode = "discover" | "search" | "selected" | "manual";
 
 const FIELD_CLASS = "w-full bg-background border border-border rounded-xl py-3 px-4 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-colors";
@@ -169,6 +177,7 @@ export default function AddCoin() {
   const [isSearching, setIsSearching] = useState(false);
   const [isFetchingDetail, setIsFetchingDetail] = useState(false);
   const [selectedMeta, setSelectedMeta] = useState<NumistaDetail | null>(null);
+  const [coinPreview, setCoinPreview] = useState<CoinPreview>({});
   const [searchError, setSearchError] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -266,17 +275,17 @@ export default function AddCoin() {
       else if (issuer.includes("ottoman") || (year >= 1300 && year < 1800)) category = "Ottoman";
       else if (issuer.includes("egypt") && year >= 1922 && year < 1953) category = "Kingdom of Egypt";
 
-      const parts: string[] = [];
-      if (detail.issuer?.name) parts.push(`Issued by: ${detail.issuer.name}.`);
-      if (detail.ruler?.name) parts.push(`Ruler: ${detail.ruler.name}.`);
-      if (yearLabel(detail.min_year, detail.max_year)) parts.push(`Year(s): ${yearLabel(detail.min_year, detail.max_year)}.`);
-      if (detail.composition?.text) parts.push(`Composition: ${detail.composition.text}.`);
-      if (detail.weight_g) parts.push(`Weight: ${detail.weight_g}g.`);
-      if (detail.diameter_mm) parts.push(`Diameter: ${detail.diameter_mm}mm.`);
+      const preview: CoinPreview = {
+        issuedBy: detail.issuer?.name ? `Issued by: ${detail.issuer.name}.` : undefined,
+        yearLabel: yearLabel(detail.min_year, detail.max_year) ? `Year(s): ${yearLabel(detail.min_year, detail.max_year)}.` : undefined,
+        composition: detail.composition?.text ? `Composition: ${detail.composition.text}.` : undefined,
+        weight: detail.weight_g ? `Weight: ${detail.weight_g}g.` : undefined,
+        diameter: detail.diameter_mm ? `Diameter: ${detail.diameter_mm}mm.` : undefined,
+      };
 
       setFormData({
         title: detail.title,
-        description: parts.join(" "),
+        description: "",
         category,
         photoUrl: detail.obverse?.thumbnail || "",
         backPhotoUrl: detail.reverse?.thumbnail || "",
@@ -286,9 +295,11 @@ export default function AddCoin() {
           : "Unknown",
         numistaId: detail.id,
       });
+      setCoinPreview(preview);
       setMode("selected");
     } catch {
       setFormData(prev => ({ ...prev, title: coin.title, numistaId: coin.id }));
+      setCoinPreview({});
       setMode("selected");
     } finally {
       setIsFetchingDetail(false);
@@ -317,6 +328,14 @@ export default function AddCoin() {
       },
     });
   };
+
+  const previewText = [
+    coinPreview.issuedBy,
+    coinPreview.yearLabel,
+    coinPreview.composition,
+    coinPreview.weight,
+    coinPreview.diameter,
+  ].filter(Boolean).join(" ");
 
   const resetToDiscover = () => {
     setMode("discover");
@@ -772,20 +791,18 @@ export default function AddCoin() {
                     {mode === "selected" && <span className="text-xs font-normal text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">Your entry</span>}
                   </span>
                 </label>
-                {mode === "selected" && (
+                {mode === "selected" && previewText && (
                   <div className="text-xs text-muted-foreground bg-muted/50 dark:bg-black/20 border border-border/40 rounded-xl p-3 mb-2 leading-relaxed">
-                    {formData.description}
+                    {previewText}
                   </div>
                 )}
                 <textarea
-                  required={mode === "manual"}
+                  required={mode === "selected" || mode === "manual"}
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
                   rows={3}
-                  placeholder={mode === "selected"
-                    ? "Add your personal notes, condition grade, provenance..."
-                    : "Describe the condition, historical context, and unique features..."}
+                  placeholder="Add your personal notes, condition grade, provenance..."
                   className={`${FIELD_CLASS} resize-none`}
                 />
               </div>
