@@ -324,7 +324,7 @@ export default function AddCoin() {
       description: [coinPreview.issuedBy, coinPreview.yearLabel, coinPreview.composition, coinPreview.weight, coinPreview.diameter]
         .filter(Boolean)
         .join(" "),
-      personalInfo: formData.personalInfo,
+      personalNotes: formData.personalInfo || undefined,
     }, {
       onSuccess: () => setLocation("/"),
       onError: (err: Error) => {

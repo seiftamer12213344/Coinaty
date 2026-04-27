@@ -37,6 +37,7 @@ export const coins = pgTable("coins", {
   backPhotoUrl: text("back_photo_url"), // Optional reverse / back face photo
   metalType: text("metal_type"), // Optional, e.g., Gold, Silver
   numistaId: text("numista_id"), // Numista N# for linking to official page
+  personalNotes: text("personal_notes"), // Collector's private notes typed in the textarea
   createdAt: timestamp("created_at").defaultNow(),
 });
 

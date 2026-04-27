@@ -148,9 +148,18 @@ export default function CoinDetails() {
                   {coin.category}
                 </span>
                 <h1 className="text-3xl font-serif font-bold text-foreground mb-4 leading-tight">{coin.title}</h1>
-                <p className="text-muted-foreground leading-relaxed">
-                  {coin.description}
-                </p>
+                {coin.description && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-3">
+                    <p className="text-xs text-primary/70 uppercase tracking-wider font-semibold mb-1">{t("coinInfo") || "Coin Info"}</p>
+                    <p className="text-muted-foreground leading-relaxed text-sm">{coin.description}</p>
+                  </div>
+                )}
+                {coin.personalNotes && (
+                  <div className="bg-muted/40 border border-border/40 rounded-xl p-3">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold mb-1">{t("personalInfo") || "Personal Info"}</p>
+                    <p className="text-foreground/80 leading-relaxed text-sm">{coin.personalNotes}</p>
+                  </div>
+                )}
               </div>
 
               <div className="pt-6 border-t border-border/30">
