@@ -151,7 +151,7 @@ export class DatabaseStorage implements IStorage {
     if (likes.length === 0) return [];
     
     const userIds = likes.map(l => l.userId);
-    return await db.select({ email: usersTable.email, id: usersTable.id, displayName: usersTable.displayName, profileImageUrl: usersTable.profileImageUrl, provider: usersTable.provider, password: usersTable.password, points: usersTable.points }).from(usersTable).where(inArray(usersTable.id, userIds));
+    return await db.select().from(usersTable).where(inArray(usersTable.id, userIds));
   }
 
   async getComments(coinId: number): Promise<Comment[]> {
