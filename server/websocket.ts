@@ -18,6 +18,7 @@ export function setupWebSocket(httpServer: Server) {
         const msg = JSON.parse(data.toString());
         if (msg.type === "auth" && msg.userId) {
           userId = msg.userId;
+          if (!userId) return;
           if (!userSockets.has(userId)) userSockets.set(userId, new Set());
           userSockets.get(userId)!.add(ws);
           broadcast({ type: "presence:update", onlineUserIds: getOnlineUserIds() });
@@ -27,10 +28,13 @@ export function setupWebSocket(httpServer: Server) {
 
     ws.on("close", () => {
       if (userId) {
-        userSockets.get(userId)?.delete(ws);
-        if (userSockets.get(userId)?.size === 0) {
-          userSockets.delete(userId);
-          broadcast({ type: "presence:update", onlineUserIds: getOnlineUserIds() });
+        const sockets = userSockets.get(userId);
+        if (sockets) {
+          sockets.delete(ws);
+          if (sockets.size === 0) {
+            userSockets.delete(userId);
+            broadcast({ type: "presence:update", onlineUserIds: getOnlineUserIds() });
+          }
         }
       }
     });

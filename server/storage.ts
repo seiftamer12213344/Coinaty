@@ -4,11 +4,6 @@ import { eq, and, or, desc, inArray, sql, ilike } from "drizzle-orm";
 import { authStorage, type IAuthStorage } from "./replit_integrations/auth";
 import bcrypt from "bcryptjs";
 
-function safeUser(u: User): Omit<User, "email"> {
-  const { email, ...safe } = u;
-  return safe;
-}
-
 export interface IStorage extends IAuthStorage {
   // Coins
   getCoins(category?: string, userId?: string): Promise<Coin[]>;
@@ -156,7 +151,7 @@ export class DatabaseStorage implements IStorage {
     if (likes.length === 0) return [];
     
     const userIds = likes.map(l => l.userId);
-    return await db.select().from(usersTable).where(inArray(usersTable.id, userIds));
+    return await db.select({ email: usersTable.email, id: usersTable.id, displayName: usersTable.displayName, profileImageUrl: usersTable.profileImageUrl, provider: usersTable.provider, password: usersTable.password, points: usersTable.points }).from(usersTable).where(inArray(usersTable.id, userIds));
   }
 
   async getComments(coinId: number): Promise<Comment[]> {
@@ -333,7 +328,7 @@ export class DatabaseStorage implements IStorage {
     const userIds = members.map(m => m.userId);
     const memberUsers = await db.select().from(usersTable).where(inArray(usersTable.id, userIds));
     const userMap = new Map(memberUsers.map(u => [u.id, u]));
-    return members.map(m => ({ ...m, user: safeUser(userMap.get(m.userId)!) })).filter(m => m.user);
+    return members.map(m => ({ ...m, user: userMap.get(m.userId)! })).filter(m => m.user);
   }
 
   async isGroupMember(groupId: number, userId: string): Promise<boolean> {
@@ -350,7 +345,7 @@ export class DatabaseStorage implements IStorage {
     const senderIds = [...new Set(msgs.map(m => m.senderId))];
     const senders = await db.select().from(usersTable).where(inArray(usersTable.id, senderIds));
     const senderMap = new Map(senders.map(u => [u.id, u]));
-    return msgs.map(m => ({ ...m, sender: safeUser(senderMap.get(m.senderId)!) })).filter(m => m.sender);
+    return msgs.map(m => ({ ...m, sender: senderMap.get(m.senderId)! })).filter(m => m.sender);
   }
 
   async sendGroupMessage(groupId: number, senderId: string, content: string): Promise<GroupMessage> {
@@ -380,7 +375,7 @@ export class DatabaseStorage implements IStorage {
     const inviters = await db.select().from(usersTable).where(inArray(usersTable.id, inviterIds));
     const groupMap = new Map(grps.map(g => [g.id, g]));
     const inviterMap = new Map(inviters.map(u => [u.id, u]));
-    return invs.map(i => ({ ...i, group: groupMap.get(i.groupId)!, inviter: safeUser(inviterMap.get(i.inviterId)!) })).filter(i => i.group && i.inviter);
+    return invs.map(i => ({ ...i, group: groupMap.get(i.groupId)!, inviter: inviterMap.get(i.inviterId)! })).filter(i => i.group && i.inviter);
   }
 
   async respondToInvitation(invitationId: number, userId: string, accept: boolean): Promise<void> {
@@ -450,7 +445,7 @@ export class DatabaseStorage implements IStorage {
     const blockedIds = blocks.map(b => b.blockedUserId);
     const users = await db.select().from(usersTable).where(inArray(usersTable.id, blockedIds));
     const userMap = new Map(users.map(u => [u.id, u]));
-    return blocks.map(b => ({ ...b, user: safeUser(userMap.get(b.blockedUserId)!) as User })).filter(b => b.user);
+    return blocks.map(b => ({ ...b, user: userMap.get(b.blockedUserId)! as User })).filter(b => b.user);
   }
 
   async blockUser(userId: string, blockedUserId: string): Promise<BlockedUser> {

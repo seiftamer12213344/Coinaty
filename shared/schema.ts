@@ -230,7 +230,8 @@ export const insertGroupMessageSchema = createInsertSchema(groupMessages).omit({
 });
 
 // Exports
-export type User = typeof users.$inferSelect;
+type DbUser = typeof users.$inferSelect;
+export type User = Omit<DbUser, 'email'> & { email?: DbUser['email'] };
 export type Coin = typeof coins.$inferSelect;
 export type CoinLike = typeof coinLikes.$inferSelect;
 export type Comment = typeof comments.$inferSelect;
