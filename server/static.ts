@@ -6,8 +6,9 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export function serveStatic(app: Express) {
-  // In production, dist/index.mjs lives in dist/, so "public" resolves to dist/public/
-  const distPath = path.resolve(__dirname, "public");
+  // Go up from the current directory (either 'server' in dev or 'dist' in prod)
+  // and then into the 'dist/public' directory where the client build is.
+  const distPath = path.resolve(__dirname, "..", "dist", "public");
 
   if (!fs.existsSync(distPath)) {
     console.error(

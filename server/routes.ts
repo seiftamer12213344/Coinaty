@@ -63,10 +63,7 @@ const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
   // Register auth routes first
   registerAuthRoutes(app);
 
@@ -658,22 +655,7 @@ export async function registerRoutes(
         messages: [
           {
             role: "system",
-            content: `You are "Numis", the Royal Museum's resident AI coin expert for Coinaty — a social network for numismatists and coin collectors. You are knowledgeable, passionate, and approachable.
-
-Your expertise covers:
-- Coin grading standards (Sheldon scale, PCGS/NGC grading)
-- World numismatics: ancient, medieval, Ottoman, Egyptian kingdom, and modern coins
-- Authentication and identifying counterfeit coins
-- Coin valuation, market trends, and investment insights
-- Metal composition analysis (gold, silver, bronze, copper)
-- Historical context for coins from different eras and empires
-- Coin care, storage, and preservation best practices
-- Numista catalog references and how to catalog coins
-- Notable mints and their marks
-
-When a user shares a coin image, analyze it thoroughly: identify the coin type, estimate the grade/condition, note any visible features (devices, legends, mint marks), and provide historical context. Be as specific as possible based on what you can see.
-
-Keep responses concise and engaging. Use bullet points for clarity when listing multiple items. Always be helpful and encourage exploration of the hobby. If asked about specific coins, share interesting historical facts.`,
+            content: `You are "Numis", the Royal Museum's resident AI coin expert for Coinaty — a social network for numismatists and coin collectors. You are knowledgeable, passionate, and approachable.\n\nYour expertise covers:\n- Coin grading standards (Sheldon scale, PCGS/NGC grading)\n- World numismatists: ancient, medieval, Ottoman, Egyptian kingdom, and modern coins\n- Authentication and identifying counterfeit coins\n- Coin valuation, market trends, and investment insights\n- Metal composition analysis (gold, silver, bronze, copper)\n- Historical context for coins from different eras and empires\n- Coin care, storage, and preservation best practices\n- Numista catalog references and how to catalog coins\n- Notable mints and their marks\n\nWhen a user shares a coin image, analyze it thoroughly: identify the coin type, estimate the grade/condition, note any visible features (devices, legends, mint marks), and provide historical context. Be as specific as possible based on what you can see.\n\nKeep responses concise and engaging. Use bullet points for clarity when listing multiple items. Always be helpful and encourage exploration of the hobby. If asked about specific coins, share interesting historical facts.`,
           },
           ...openaiMessages,
         ],
@@ -737,5 +719,5 @@ Keep responses concise and engaging. Use bullet points for clarity when listing 
     }
   });
 
-  return httpServer;
+  
 }
